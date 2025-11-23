@@ -1,24 +1,28 @@
-import logo from './logo.svg';
-import './App.css';
+// src/App.js (Example structure)
+import { ThemeProvider } from '@mui/material/styles';
+import DiscussifyHome from './components/DiscussifyHome';
+import theme from './theme';
+import {BrowserRouter ,Route , Routes} from 'react-router-dom';
+import RegistrationPage from './pages/RegistrationPage';
+import LoginPage from './pages/LoginPage';
+import NotFoundPage from './pages/NotFoundPage';
+import UserDashboard from './pages/UserDashboard';
+import RegistrationComponent from './pages/RegistrationPage';
+
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <ThemeProvider theme={theme}>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={ <DiscussifyHome /> } />
+          <Route path="/register" element={ <RegistrationComponent /> } />
+          <Route path="/login" element={ <LoginPage /> } />
+          <Route path="/user" element={ <UserDashboard /> } />
+          <Route path="*" element={ <NotFoundPage /> } />
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
 
