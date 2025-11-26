@@ -59,17 +59,10 @@ export const getUserProfile = async () => {
  * Update user profile
  */
 export const updateUserProfile = async (profileData) => {
-  const response = await api.put('/profile', profileData);
+  const response = await api.patch('/auth/update-profile', profileData);
   return response.data;
 };
 
-/**
- * Update user interests
- */
-export const updateUserInterests = async (interests) => {
-  const response = await api.put('/profile/interests', { interests });
-  return response.data;
-};
 
 /**
  * Get user statistics
@@ -186,9 +179,9 @@ export const joinCommunity = async (idOrSlug) => {
 /**
  * Search user's communities
  */
-export const searchUserCommunities = async (query) => {
-  const response = await api.get(`/communities/search?q=${query}`);
-  return response.data;
-};
+// export const searchUserCommunities = async (query) => {
+//   const response = await api.get(`/communities/search?q=${query}`);
+//   return response.data;
+// };
 
 export default api;

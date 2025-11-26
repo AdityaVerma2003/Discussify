@@ -151,7 +151,7 @@ const CommunityPage = ({ community, userId, goBack }) => {
 };
 
 // Main Dashboard Component
-export default function UserDashboardMui() {
+export default function UserDashboard() {
   // UI State
   const [view, setView] = useState('dashboard');
   const [selectedCommunity, setSelectedCommunity] = useState(null);
@@ -197,45 +197,81 @@ export default function UserDashboardMui() {
     loadDashboardData();
   }, []);
 
-  const loadDashboardData = async () => {
+  const BASE_URL = 'http://localhost:3001';
+
+const formatImageUrl = (imagePath) => {
+  if (!imagePath) return null;
+  
+  // If already a complete URL, return as is
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
+  }
+  
+  // If it starts with a slash, just append base URL
+  if (imagePath.startsWith('/')) {
+    return `${BASE_URL}${imagePath}`;
+  }
+  
+  // Otherwise add both base URL and slash
+  return `${BASE_URL}/${imagePath}`;
+};
+
+ const loadDashboardData = async () => {
+  try {
+    setLoading(true);
+    
+    // Load profile first (critical)
+    const profileRes = await getUserProfile();
+    console.log("profile", profileRes.user);
+    
+    // Format profile image URL safely
+    const formattedProfile = {
+      ...profileRes.user,
+      profileImage: formatImageUrl(profileRes.user.profileImage)
+    };
+    
+    setProfileData(formattedProfile);
+    setEditData(formattedProfile);
+    
+    // Load communities (critical)
     try {
-      setLoading(true);
+      const myCommunitiesRes = await getMyCommunities();
+      console.log("myCommunities", myCommunitiesRes.data);
       
-      // Load profile first (critical)
-      const profileRes = await getUserProfile();
-      setProfileData(profileRes.data);
-      setEditData(profileRes.data);
+      // Format community cover images safely
+      const formattedCommunities = (myCommunitiesRes.data || []).map(community => ({
+        ...community,
+        coverImage: formatImageUrl(community.coverImage)
+      }));
       
-      // Load communities (critical)
-      try {
-        const myCommunitiesRes = await getMyCommunities();
-        setMyCommunities(myCommunitiesRes.data || []);
-      } catch (err) {
-        console.error('Error loading communities:', err);
-        setMyCommunities([]);
-      }
-      
-      // Load notifications (non-critical, may not exist yet)
-      try {
-        const notificationsRes = await getUserNotifications();
-        setNotifications(notificationsRes.data || []);
-      } catch (err) {
-        console.error('Notifications not available:', err);
-        setNotifications([]);
-      }
-      
+      setMyCommunities(formattedCommunities);
     } catch (err) {
-      console.error('Error loading dashboard data:', err);
-      
-      // Only show error if it's not a 404 (endpoint doesn't exist)
-      if (err.response?.status !== 404) {
-        setError(err.response?.data?.message || 'Failed to load dashboard data');
-        showSnackbar('Failed to load some dashboard data', 'warning');
-      }
-    } finally {
-      setLoading(false);
+      console.error('Error loading communities:', err);
+      setMyCommunities([]);
     }
-  };
+    
+    // Load notifications (non-critical, may not exist yet)
+    try {
+      const notificationsRes = await getUserNotifications();
+      console.log("notificationres", notificationsRes);
+      setNotifications(notificationsRes.notifications || []);
+    } catch (err) {
+      console.error('Notifications not available:', err);
+      setNotifications([]);
+    }
+    
+  } catch (err) {
+    console.error('Error loading dashboard data:', err);
+    
+    // Only show error if it's not a 404 (endpoint doesn't exist)
+    if (err.response?.status !== 404) {
+      setError(err.response?.data?.message || 'Failed to load dashboard data');
+      showSnackbar('Failed to load some dashboard data', 'warning');
+    }
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Load tab-specific data
   useEffect(() => {
@@ -247,31 +283,45 @@ export default function UserDashboardMui() {
   }, [currentTab]);
 
   const loadPopularCommunities = async () => {
-    try {
-      setLoadingTab(true);
-      const response = await getPopularCommunities(10);
-      setPopularCommunities(response.data || []);
-    } catch (err) {
-      console.error('Error loading popular communities:', err);
-      showSnackbar('Failed to load popular communities', 'error');
-    } finally {
-      setLoadingTab(false);
-    }
-  };
+  try {
+    setLoadingTab(true);
+    const response = await getPopularCommunities(10);
+    
+    // Format cover images
+    const formattedCommunities = (response.data || []).map(community => ({
+      ...community,
+      coverImage: formatImageUrl(community.coverImage)
+    }));
+    
+    setPopularCommunities(formattedCommunities);
+  } catch (err) {
+    console.error('Error loading popular communities:', err);
+    showSnackbar('Failed to load popular communities', 'error');
+  } finally {
+    setLoadingTab(false);
+  }
+};
 
-  const loadRecommendedCommunities = async () => {
-    try {
-      setLoadingTab(true);
-      const response = await getRecommendedCommunities();
-      setRecommendedCommunities(response.data || []);
-    } catch (err) {
-      console.error('Error loading recommended communities:', err);
-      showSnackbar('Failed to load recommended communities', 'error');
-    } finally {
-      setLoadingTab(false);
-    }
-  };
-
+ 
+const loadRecommendedCommunities = async () => {
+  try {
+    setLoadingTab(true);
+    const response = await getRecommendedCommunities();
+    
+    // Format cover images
+    const formattedCommunities = (response.data || []).map(community => ({
+      ...community,
+      coverImage: formatImageUrl(community.coverImage)
+    }));
+    
+    setRecommendedCommunities(formattedCommunities);
+  } catch (err) {
+    console.error('Error loading recommended communities:', err);
+    showSnackbar('Failed to load recommended communities', 'error');
+  } finally {
+    setLoadingTab(false);
+  }
+};
   const showSnackbar = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
   };
@@ -299,8 +349,6 @@ export default function UserDashboardMui() {
       // Refresh communities
       const myCommunitiesRes = await getMyCommunities();
       setMyCommunities(myCommunitiesRes.data || []);
-      
-      // Remove from popular/recommended if present
       setPopularCommunities(prev => prev.filter(c => c._id !== community._id));
       setRecommendedCommunities(prev => prev.filter(c => c._id !== community._id));
     } catch (err) {
@@ -336,10 +384,10 @@ export default function UserDashboardMui() {
       // If there's a profile image file, you would upload it first
       // For now, we'll just update the text fields
       const response = await updateUserProfile({
-        username: editData.name,
+        username: editData.username,
         bio: editData.bio,
         interests: editData.interests,
-        // profileImage: editData.profileImage, // Would be the URL after upload
+        profileImage: editData.profileImage, // Would be the URL after upload
       });
       setProfileData(response.data);
       setEditProfileDialog(false);
@@ -440,8 +488,11 @@ export default function UserDashboardMui() {
     }
 
     try {
-      const response = await searchUserCommunities(query);
-      setMyCommunities(response.data || []);
+      const filtered  = myCommunities.filter(c => 
+        c.name.toLowerCase().includes(query.toLowerCase())
+      );
+      console.log("filtered", filtered);
+      setMyCommunities(filtered);
     } catch (err) {
       console.error('Error searching communities:', err);
     }
@@ -532,7 +583,7 @@ export default function UserDashboardMui() {
           {/* Welcome */}
           <Box mb={4}>
             <Typography variant="h4" fontWeight={700} color="text.primary" gutterBottom>
-              Welcome back, {profileData?.name}!
+              Welcome back, {profileData?.username}!
             </Typography>
             <Typography color="text.secondary">Manage your communities and discover new ones</Typography>
           </Box>
@@ -592,8 +643,10 @@ export default function UserDashboardMui() {
                         <Card variant="outlined" sx={{ borderRadius: 2, '&:hover': { boxShadow: 4 } }}>
                           <CardContent>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                              <Avatar sx={{ bgcolor: '#2563eb', width: 56, height: 56, fontSize: 20, fontWeight: 700 }}>
-                                {community.name.charAt(0)}
+                              <Avatar 
+                              src={community.coverImage ? community.coverImage : null}
+                              sx={{ bgcolor: '#2563eb', width: 56, height: 56, fontSize: 20, fontWeight: 700 }}>
+                                {!community.coverImage && (community.coverImage|| 'U')}
                               </Avatar>
                               {isNew && <Chip label="New" size="small" color="success" />}
                             </Box>
@@ -632,13 +685,16 @@ export default function UserDashboardMui() {
                       <Typography align="center" color="text.secondary">No popular communities found</Typography>
                     </Grid>
                   ) : (
-                    popularCommunities.map((community) => (
+                    popularCommunities.map((community) => {
+                      return (
                       <Grid item key={community._id} xs={12} md={6} lg={4}>
                         <Card variant="outlined" sx={{ borderRadius: 2, '&:hover': { boxShadow: 4 } }}>
                           <CardContent>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                              <Avatar sx={{ bgcolor: '#ef4444', width: 56, height: 56, fontSize: 20, fontWeight: 700 }}>
-                                {community.name.charAt(0)}
+                              <Avatar 
+                              src={community.coverImage ? community.coverImage : null}
+                              sx={{ bgcolor: '#ef4444', width: 56, height: 56, fontSize: 20, fontWeight: 700 }}>
+                                {!community.coverImage && (community.coverImage|| 'U')}
                               </Avatar>
                               <Chip icon={<TrendingUpIcon fontSize="small" />} label="Trending" size="small" color="error" />
                             </Box>
@@ -658,7 +714,8 @@ export default function UserDashboardMui() {
                           </CardContent>
                         </Card>
                       </Grid>
-                    ))
+                      )
+                    })
                   )}
                 </Grid>
               )}
@@ -888,7 +945,7 @@ export default function UserDashboardMui() {
             >
               {!profileData?.profileImage && (profileData?.name?.charAt(0) || 'U')}
             </Avatar>
-            <Typography variant="h6">{profileData?.name || 'User'}</Typography>
+            <Typography variant="h6">{profileData?.username || 'User'}</Typography>
             <Typography variant="body2" color="text.secondary" mb={2}>
               {profileData?.email || ''}
             </Typography>

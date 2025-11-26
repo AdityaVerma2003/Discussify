@@ -342,6 +342,8 @@ const LoginView = ({ setCurrentView, showToast }) => {
             const result = await response.json();
 
             if (response.ok && result.token) { 
+                localStorage.setItem('token', result.token);
+                 localStorage.setItem('role', result.user.role);
                 showToast("Login successful! Redirecting...", "success");
                 setFormData({ email: '', password: '' }); 
                 setTimeout(() => navigate('/user'), 1500); 

@@ -1,10 +1,13 @@
 // src/components/FeatureCard.jsx
 import React from 'react';
 import { Card, CardContent, Typography, Box } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 
 const FeatureCard = ({ icon, title, description, color }) => {
+  const navigate = useNavigate();
   return (
     <Card
+      onClick={() => navigate("/register")}
       sx={{
         p: 2,
         borderRadius: 3,

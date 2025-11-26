@@ -6,8 +6,6 @@ import {
   Button,
   Container,
   Box,
-  TextField,
-  InputAdornment,
   IconButton,
   Drawer,
   List,
@@ -17,28 +15,18 @@ import {
   ListItemIcon,
 } from "@mui/material";
 import {
-  Search,
   Forum,
   Menu as MenuIcon,
-  Home,
-  Group,
-  Info,
   Person2Outlined,
   Login,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 
-const Navbar = ({ handleSearch }) => {
+const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
   const navigate = useNavigate();
 
-  const navItems = [
-    { name: "Home", icon: <Home /> },
-    { name: "Communities", icon: <Group /> },
-    { name: "About", icon: <Info /> },
-  ];
+  const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
 
   const drawer = (
     <Box
@@ -59,23 +47,7 @@ const Navbar = ({ handleSearch }) => {
       <Divider sx={{ bgcolor: "white" }} />
 
       <List>
-        {navItems.map((item) => (
-          <ListItem
-            button
-            key={item.name}
-            onClick={() => {
-              navigate(`/${item.name.toLowerCase().replace(/\s+/g, '')}`);
-              setMobileOpen(false);
-            }}
-          >
-            <ListItemIcon sx={{ color: "white" }}>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.name} />
-          </ListItem>
-        ))}
-
-        <Divider sx={{ bgcolor: "white", mt: 1 }} />
-
-        <Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 1 }}>
+        <ListItem>
           <Button
             variant="contained"
             fullWidth
@@ -85,11 +57,16 @@ const Navbar = ({ handleSearch }) => {
               fontWeight: 700,
               "&:hover": { bgcolor: "grey.200" },
             }}
-            onClick={() => navigate('/register')}
+            onClick={() => {
+              navigate("/register");
+              setMobileOpen(false);
+            }}
           >
             Sign Up
           </Button>
+        </ListItem>
 
+        <ListItem>
           <Button
             variant="outlined"
             fullWidth
@@ -98,11 +75,14 @@ const Navbar = ({ handleSearch }) => {
               color: "white",
               fontWeight: 700,
             }}
-            onClick={() => navigate('/login')}
+            onClick={() => {
+              navigate("/login");
+              setMobileOpen(false);
+            }}
           >
             Log In
           </Button>
-        </Box>
+        </ListItem>
       </List>
     </Box>
   );
@@ -118,7 +98,7 @@ const Navbar = ({ handleSearch }) => {
       }}
     >
       <Container maxWidth="lg">
-        <Toolbar sx={{ py: { xs: 1, md: 2 } }}>
+        <Toolbar sx={{ py: { xs: 1, md: 1} }}>
           {/* Mobile Menu Button */}
           <IconButton
             color="inherit"
@@ -130,6 +110,7 @@ const Navbar = ({ handleSearch }) => {
           </IconButton>
 
           {/* Logo */}
+          <Box sx={{ display: "flex", alignItems: "center", cursor: "pointer" }} onClick={() => navigate("/")}>
           <Forum sx={{ fontSize: { xs: 28, md: 38 }, mr: 1 }} />
           <Typography
             variant="h5"
@@ -142,31 +123,11 @@ const Navbar = ({ handleSearch }) => {
           >
             Discussify
           </Typography>
-
-          {/* Search Bar - visible even on mobile (below md) */}
-          <Box sx={{ flexGrow: 1, mx: 2, display: { xs: "none", sm: "block" } }}>
-            <TextField
-              placeholder="Search communities or topics"
-              size="small"
-              onChange={handleSearch}
-              sx={{
-                width: "100%",
-                maxWidth: 420,
-                bgcolor: "white",
-                borderRadius: 2,
-                "& fieldset": { border: "none" },
-              }}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search color="primary" />
-                  </InputAdornment>
-                ),
-              }}
-            />
           </Box>
 
-          {/* Desktop Navigation */}
+          <Box sx={{ flexGrow: 1 }} />
+
+          {/* Sign Up / Log In (Desktop) */}
           <Box
             sx={{
               display: { xs: "none", md: "flex" },
@@ -174,16 +135,6 @@ const Navbar = ({ handleSearch }) => {
               gap: 3,
             }}
           >
-            {navItems.map((item) => (
-              <Button
-                key={item.name}
-                color="inherit"
-                onClick={() => navigate(`/${item.name.toLowerCase().replace(/\s+/g, '')}`)}
-              >
-                {item.name}
-              </Button>
-            ))}
-
             <Button
               variant="contained"
               startIcon={<Person2Outlined />}
@@ -193,7 +144,7 @@ const Navbar = ({ handleSearch }) => {
                 fontWeight: 700,
                 "&:hover": { bgcolor: "grey.200" },
               }}
-              onClick={() => navigate('/register')}
+              onClick={() => navigate("/register")}
             >
               Sign Up
             </Button>
@@ -202,7 +153,7 @@ const Navbar = ({ handleSearch }) => {
               variant="outlined"
               startIcon={<Login />}
               sx={{ color: "white", borderColor: "white", fontWeight: 700 }}
-              onClick={() => navigate('/login')}
+              onClick={() => navigate("/login")}
             >
               Log In
             </Button>
