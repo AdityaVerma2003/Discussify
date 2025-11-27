@@ -5,15 +5,28 @@ import {
   Divider, List, ListItem, ListItemAvatar, ListItemText, Dialog, DialogTitle,
   DialogContent, DialogActions, TextField, Stack, Tooltip, CircularProgress,
   Alert, Snackbar,
+  FormControl,
+  Select,
+  OutlinedInput,
+  MenuItem,
+  InputAdornment,
+  InputLabel,
 } from '@mui/material';
 
 import {
   Notifications as NotificationsIcon, Settings as SettingsIcon, Search as SearchIcon,
   Group as GroupIcon, TrendingUp as TrendingUpIcon, ThumbUp as ThumbUpIcon,
   Close as CloseIcon, Check as CheckIcon, Edit as EditIcon,
-  AddCircle as AddCircleIcon, ArrowBack as ArrowBackIcon, Send as SendIcon, 
+  AddCircle as AddCircleIcon, ArrowBack as ArrowBackIcon, Send as SendIcon,
   AttachFile as AttachFileIcon, FavoriteBorder as FavoriteBorderIcon, Reply as ReplyIcon,
   PhotoCamera as PhotoCameraIcon,
+  Favorite,
+  Info,
+  Interests,
+  QueryStats,
+  Lightbulb,
+  Visibility,
+  Share,
 } from '@mui/icons-material';
 
 // Import API functions
@@ -35,12 +48,12 @@ import {
 // Mock Community Page Component (unchanged from original)
 const CommunityPage = ({ community, userId, goBack }) => {
   const [posts] = useState([
-    { 
-      id: 1, 
-      creatorName: 'Alice', 
-      content: 'Hey everyone! Just started learning React Query!', 
+    {
+      id: 1,
+      creatorName: 'Alice',
+      content: 'Hey everyone! Just started learning React Query!',
       timestamp: new Date(Date.now() - 3600000),
-      likes: 5, 
+      likes: 5,
     },
   ]);
   const [newPostContent, setNewPostContent] = useState('');
@@ -95,10 +108,10 @@ const CommunityPage = ({ community, userId, goBack }) => {
             </Typography>
           </Box>
           <Tooltip title={`Your Role: ${community.role || 'Member'}`}>
-            <Chip 
-              label={community.role || 'Member'} 
-              size="small" 
-              sx={{ bgcolor: 'white', color: 'primary.main', fontWeight: 600 }} 
+            <Chip
+              label={community.role || 'Member'}
+              size="small"
+              sx={{ bgcolor: 'white', color: 'primary.main', fontWeight: 600 }}
             />
           </Tooltip>
         </Toolbar>
@@ -132,13 +145,13 @@ const CommunityPage = ({ community, userId, goBack }) => {
           multiline
           maxRows={4}
         />
-        <IconButton 
-          color="primary" 
-          onClick={handlePostSubmit} 
+        <IconButton
+          color="primary"
+          onClick={handlePostSubmit}
           disabled={!newPostContent.trim()}
-          sx={{ 
-            bgcolor: 'primary.main', 
-            color: 'white', 
+          sx={{
+            bgcolor: 'primary.main',
+            color: 'white',
             '&:hover': { bgcolor: 'primary.dark' },
             '&.Mui-disabled': { bgcolor: 'grey.300', color: 'grey.500' }
           }}
@@ -178,7 +191,7 @@ export default function UserDashboard() {
   // Create Community State
   const [newCommunityData, setNewCommunityData] = useState({
     name: '',
-    categories: '',
+    categories: [],
     description: '',
     coverImage: null,
     coverFile: null,
@@ -195,83 +208,84 @@ export default function UserDashboard() {
   // Load initial data
   useEffect(() => {
     loadDashboardData();
-  }, []);
+  }, [currentTab]);
 
   const BASE_URL = 'http://localhost:3001';
 
-const formatImageUrl = (imagePath) => {
-  if (!imagePath) return null;
-  
-  // If already a complete URL, return as is
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-    return imagePath;
-  }
-  
-  // If it starts with a slash, just append base URL
-  if (imagePath.startsWith('/')) {
-    return `${BASE_URL}${imagePath}`;
-  }
-  
-  // Otherwise add both base URL and slash
-  return `${BASE_URL}/${imagePath}`;
-};
+  const formatImageUrl = (imagePath) => {
+    if (!imagePath) return null;
 
- const loadDashboardData = async () => {
-  try {
-    setLoading(true);
-    
-    // Load profile first (critical)
-    const profileRes = await getUserProfile();
-    console.log("profile", profileRes.user);
-    
-    // Format profile image URL safely
-    const formattedProfile = {
-      ...profileRes.user,
-      profileImage: formatImageUrl(profileRes.user.profileImage)
-    };
-    
-    setProfileData(formattedProfile);
-    setEditData(formattedProfile);
-    
-    // Load communities (critical)
+    // If already a complete URL, return as is
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+
+    // If it starts with a slash, just append base URL
+    if (imagePath.startsWith('/')) {
+      return `${BASE_URL}${imagePath}`;
+    }
+
+    // Otherwise add both base URL and slash
+    return `${BASE_URL}/${imagePath}`;
+  };
+
+  const loadDashboardData = async () => {
     try {
-      const myCommunitiesRes = await getMyCommunities();
-      console.log("myCommunities", myCommunitiesRes.data);
-      
-      // Format community cover images safely
-      const formattedCommunities = (myCommunitiesRes.data || []).map(community => ({
-        ...community,
-        coverImage: formatImageUrl(community.coverImage)
-      }));
-      
-      setMyCommunities(formattedCommunities);
+      setLoading(true);
+
+      // Load profile first (critical)
+      const profileRes = await getUserProfile();
+      console.log("profile", profileRes.user);
+
+      // Format profile image URL safely
+      const formattedProfile = {
+        ...profileRes.user,
+        profileImage: formatImageUrl(profileRes.user.profileImage)
+      };
+
+      setProfileData(formattedProfile);
+      setEditData(formattedProfile);
+
+      // Load communities (critical)
+      try {
+        const myCommunitiesRes = await getMyCommunities();
+        console.log("myCommunities", myCommunitiesRes.data);
+
+        // Format community cover images safely
+        const formattedCommunities = (myCommunitiesRes.data || []).map(community => ({
+          ...community,
+          coverImage: formatImageUrl(community.coverImage)
+        }));
+        console.log("formatted Communities", formattedCommunities)
+
+        setMyCommunities(formattedCommunities);
+      } catch (err) {
+        console.error('Error loading communities:', err);
+        setMyCommunities([]);
+      }
+
+      // Load notifications (non-critical, may not exist yet)
+      try {
+        const notificationsRes = await getUserNotifications();
+        console.log("notificationres", notificationsRes);
+        setNotifications(notificationsRes.notifications || []);
+      } catch (err) {
+        console.error('Notifications not available:', err);
+        setNotifications([]);
+      }
+
     } catch (err) {
-      console.error('Error loading communities:', err);
-      setMyCommunities([]);
+      console.error('Error loading dashboard data:', err);
+
+      // Only show error if it's not a 404 (endpoint doesn't exist)
+      if (err.response?.status !== 404) {
+        setError(err.response?.data?.message || 'Failed to load dashboard data');
+        showSnackbar('Failed to load some dashboard data', 'warning');
+      }
+    } finally {
+      setLoading(false);
     }
-    
-    // Load notifications (non-critical, may not exist yet)
-    try {
-      const notificationsRes = await getUserNotifications();
-      console.log("notificationres", notificationsRes);
-      setNotifications(notificationsRes.notifications || []);
-    } catch (err) {
-      console.error('Notifications not available:', err);
-      setNotifications([]);
-    }
-    
-  } catch (err) {
-    console.error('Error loading dashboard data:', err);
-    
-    // Only show error if it's not a 404 (endpoint doesn't exist)
-    if (err.response?.status !== 404) {
-      setError(err.response?.data?.message || 'Failed to load dashboard data');
-      showSnackbar('Failed to load some dashboard data', 'warning');
-    }
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   // Load tab-specific data
   useEffect(() => {
@@ -283,45 +297,46 @@ const formatImageUrl = (imagePath) => {
   }, [currentTab]);
 
   const loadPopularCommunities = async () => {
-  try {
-    setLoadingTab(true);
-    const response = await getPopularCommunities(10);
-    
-    // Format cover images
-    const formattedCommunities = (response.data || []).map(community => ({
-      ...community,
-      coverImage: formatImageUrl(community.coverImage)
-    }));
-    
-    setPopularCommunities(formattedCommunities);
-  } catch (err) {
-    console.error('Error loading popular communities:', err);
-    showSnackbar('Failed to load popular communities', 'error');
-  } finally {
-    setLoadingTab(false);
-  }
-};
+    try {
+      setLoadingTab(true);
+      const response = await getPopularCommunities(10);
 
- 
-const loadRecommendedCommunities = async () => {
-  try {
-    setLoadingTab(true);
-    const response = await getRecommendedCommunities();
-    
-    // Format cover images
-    const formattedCommunities = (response.data || []).map(community => ({
-      ...community,
-      coverImage: formatImageUrl(community.coverImage)
-    }));
-    
-    setRecommendedCommunities(formattedCommunities);
-  } catch (err) {
-    console.error('Error loading recommended communities:', err);
-    showSnackbar('Failed to load recommended communities', 'error');
-  } finally {
-    setLoadingTab(false);
-  }
-};
+      // Format cover images
+      const formattedCommunities = (response.data || []).map(community => ({
+        ...community,
+        coverImage: formatImageUrl(community.coverImage)
+      }));
+
+      setPopularCommunities(formattedCommunities);
+    } catch (err) {
+      console.error('Error loading popular communities:', err);
+      showSnackbar('Failed to load popular communities', 'error');
+    } finally {
+      setLoadingTab(false);
+    }
+  };
+
+
+  const loadRecommendedCommunities = async () => {
+    try {
+      setLoadingTab(true);
+      const response = await getRecommendedCommunities();
+
+      // Format cover images
+      const formattedCommunities = (response.data || []).map(community => ({
+        ...community,
+        coverImage: formatImageUrl(community.coverImage)
+      }));
+
+      setRecommendedCommunities(formattedCommunities);
+    } catch (err) {
+      console.error('Error loading recommended communities:', err);
+      showSnackbar('Failed to load recommended communities', 'error');
+    } finally {
+      setLoadingTab(false);
+    }
+  };
+
   const showSnackbar = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
   };
@@ -345,7 +360,7 @@ const loadRecommendedCommunities = async () => {
     try {
       const response = await joinCommunityAPI(community._id || community.id);
       showSnackbar(response.message || `Successfully joined ${community.name}!`, 'success');
-      
+
       // Refresh communities
       const myCommunitiesRes = await getMyCommunities();
       setMyCommunities(myCommunitiesRes.data || []);
@@ -389,11 +404,14 @@ const loadRecommendedCommunities = async () => {
         interests: editData.interests,
         profileImage: editData.profileImage, // Would be the URL after upload
       });
-      setProfileData(response.data);
+      console.log("response after editing", response)
+      setProfileData(response.user);
       setEditProfileDialog(false);
       showSnackbar('Profile updated successfully!', 'success');
-      
+
       // Reload dashboard to reflect changes
+      console.log("calling load dashboard again ");
+
       loadDashboardData();
     } catch (err) {
       console.error('Error updating profile:', err);
@@ -405,10 +423,10 @@ const loadRecommendedCommunities = async () => {
     const file = e.target.files[0];
     if (file) {
       const imageUrl = URL.createObjectURL(file);
-      setNewCommunityData(prev => ({ 
-        ...prev, 
-        coverImage: imageUrl, 
-        coverFile: file,      
+      setNewCommunityData(prev => ({
+        ...prev,
+        coverImage: imageUrl,
+        coverFile: file,
       }));
     }
   };
@@ -418,8 +436,8 @@ const loadRecommendedCommunities = async () => {
     const file = e.target.files[0];
     if (file) {
       const imageUrl = URL.createObjectURL(file);
-      setEditData(prev => ({ 
-        ...prev, 
+      setEditData(prev => ({
+        ...prev,
         profileImage: imageUrl,
         profileImageFile: file,
       }));
@@ -431,7 +449,7 @@ const loadRecommendedCommunities = async () => {
     setEditData(prev => {
       const currentInterests = prev.interests || [];
       const hasInterest = currentInterests.includes(interest);
-      
+
       return {
         ...prev,
         interests: hasInterest
@@ -457,18 +475,18 @@ const loadRecommendedCommunities = async () => {
       });
 
       showSnackbar(`Community "${response.data.name}" created successfully!`, 'success');
-      
+
       // Refresh my communities
       const myCommunitiesRes = await getMyCommunities();
       setMyCommunities(myCommunitiesRes.data || []);
-      
+
       // Reset form
-      setNewCommunityData({ 
-        name: '', 
-        categories: '', 
-        description: '', 
-        coverImage: null, 
-        coverFile: null 
+      setNewCommunityData({
+        name: '',
+        categories: '',
+        description: '',
+        coverImage: null,
+        coverFile: null
       });
       setCurrentTab(0); // Switch to My Communities tab
     } catch (err) {
@@ -488,7 +506,7 @@ const loadRecommendedCommunities = async () => {
     }
 
     try {
-      const filtered  = myCommunities.filter(c => 
+      const filtered = myCommunities.filter(c =>
         c.name.toLowerCase().includes(query.toLowerCase())
       );
       console.log("filtered", filtered);
@@ -497,6 +515,10 @@ const loadRecommendedCommunities = async () => {
       console.error('Error searching communities:', err);
     }
   };
+
+  const handleInviteMembers = (community)=>{
+    console.log("invitiation send" , community)
+  }
 
   const unreadCount = notifications.filter(n => !n.read).length;
   const filteredMyCommunities = myCommunities;
@@ -526,8 +548,8 @@ const loadRecommendedCommunities = async () => {
           <Typography variant="h6" gutterBottom>Failed to Load Dashboard</Typography>
           <Typography variant="body2">{error}</Typography>
         </Alert>
-        <Button 
-          variant="contained" 
+        <Button
+          variant="contained"
           onClick={() => {
             setError(null);
             loadDashboardData();
@@ -535,8 +557,8 @@ const loadRecommendedCommunities = async () => {
         >
           Retry
         </Button>
-        <Button 
-          variant="outlined" 
+        <Button
+          variant="outlined"
           onClick={() => {
             localStorage.removeItem('token');
             window.location.href = '/login';
@@ -553,6 +575,26 @@ const loadRecommendedCommunities = async () => {
   if (view === 'community' && selectedCommunity) {
     return <CommunityPage community={selectedCommunity} userId={profileData?.id} goBack={goBackToDashboard} />;
   }
+     const handleDeleteCategory = (chipToDelete) => (event) => {
+        // Prevent the event from bubbling up to the Select component
+        event.stopPropagation();
+        
+        setNewCommunityData((prev) => ({
+            ...prev,
+            categories: prev.categories.filter((category) => category !== chipToDelete),
+        }));
+    };
+
+    const ITEM_HEIGHT = 48;
+const ITEM_PADDING_TOP = 8;
+const MenuProps = {
+  PaperProps: {
+    style: {
+      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
+      width: 250,
+    },
+  },
+};
 
   // Dashboard view
   return (
@@ -581,12 +623,29 @@ const loadRecommendedCommunities = async () => {
       <Container maxWidth="xl" sx={{ py: 6 }}>
         <Container maxWidth="lg" sx={{ px: { xs: 2, md: 0 } }}>
           {/* Welcome */}
-          <Box mb={4}>
+          <Paper sx={{px:3 , py:3 , mb:4}}>
+          <Box sx={{display:"flex"}}>
+              <Avatar
+              src={profileData?.profileImage}
+              sx={{
+                bgcolor: '#1e40af',
+                width: 80,
+                height: 80,
+                mx:4,
+                mb: 2,
+                fontSize: 32
+              }}
+            >
+              {!profileData?.profileImage && (profileData?.name?.charAt(0) || 'U')}
+            </Avatar>
+            <Box sx={{display:"flex" , flexDirection:"column"}}>
             <Typography variant="h4" fontWeight={700} color="text.primary" gutterBottom>
               Welcome back, {profileData?.username}!
             </Typography>
             <Typography color="text.secondary">Manage your communities and discover new ones</Typography>
+            </Box>
           </Box>
+          </Paper>
 
           {/* Tabs */}
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 4 }}>
@@ -643,10 +702,10 @@ const loadRecommendedCommunities = async () => {
                         <Card variant="outlined" sx={{ borderRadius: 2, '&:hover': { boxShadow: 4 } }}>
                           <CardContent>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                              <Avatar 
-                              src={community.coverImage ? community.coverImage : null}
-                              sx={{ bgcolor: '#2563eb', width: 56, height: 56, fontSize: 20, fontWeight: 700 }}>
-                                {!community.coverImage && (community.coverImage|| 'U')}
+                              <Avatar
+                                src={community.coverImage ? community.coverImage : null}
+                                sx={{ bgcolor: '#2563eb', width: 56, height: 56, fontSize: 20, fontWeight: 700 }}>
+                                {!community.coverImage && (community.coverImage || 'U')}
                               </Avatar>
                               {isNew && <Chip label="New" size="small" color="success" />}
                             </Box>
@@ -658,9 +717,16 @@ const loadRecommendedCommunities = async () => {
                               <Chip label={community.categories?.[0] || community.category || 'General'} variant="outlined" size="small" />
                               <Chip label={community.role || 'Member'} size="small" color="success" />
                             </Stack>
+                            <Stack direction="column" spacing={1}>
                             <Button fullWidth variant="contained" onClick={() => handleViewCommunity(community)} sx={{ fontWeight: 600 }}>
-                              View Community
+                              <Visibility sx={{mr:1}}/>View Community
                             </Button>
+                            <Button fullWidth variant="contained" 
+                            onClick={() => handleInviteMembers(community)} 
+                            sx={{ fontWeight: 600 }}>
+                              <Share sx={{mr:1}}/>Invite Members
+                            </Button>
+                            </Stack>
                           </CardContent>
                         </Card>
                       </Grid>
@@ -687,33 +753,33 @@ const loadRecommendedCommunities = async () => {
                   ) : (
                     popularCommunities.map((community) => {
                       return (
-                      <Grid item key={community._id} xs={12} md={6} lg={4}>
-                        <Card variant="outlined" sx={{ borderRadius: 2, '&:hover': { boxShadow: 4 } }}>
-                          <CardContent>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                              <Avatar 
-                              src={community.coverImage ? community.coverImage : null}
-                              sx={{ bgcolor: '#ef4444', width: 56, height: 56, fontSize: 20, fontWeight: 700 }}>
-                                {!community.coverImage && (community.coverImage|| 'U')}
-                              </Avatar>
-                              <Chip icon={<TrendingUpIcon fontSize="small" />} label="Trending" size="small" color="error" />
-                            </Box>
-                            <Typography variant="h6" fontWeight={700} gutterBottom>{community.name}</Typography>
-                            <Typography variant="body2" color="text.secondary" mb={1}>
-                              {community.memberCount || 0} members
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary" mb={2} noWrap>
-                              {community.description}
-                            </Typography>
-                            <Box mb={2}>
-                              <Chip label={community.categories?.[0] || 'General'} size="small" variant="outlined" />
-                            </Box>
-                            <Button fullWidth variant="outlined" onClick={() => handleJoinCommunity(community)} sx={{ fontWeight: 600 }}>
-                              Join Community
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      </Grid>
+                        <Grid item key={community._id} xs={12} md={6} lg={4}>
+                          <Card variant="outlined" sx={{ borderRadius: 2, '&:hover': { boxShadow: 4 } }}>
+                            <CardContent>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                                <Avatar
+                                  src={community.coverImage ? community.coverImage : null}
+                                  sx={{ bgcolor: '#ef4444', width: 56, height: 56, fontSize: 20, fontWeight: 700 }}>
+                                  {!community.coverImage && (community.coverImage || 'U')}
+                                </Avatar>
+                                <Chip icon={<TrendingUpIcon fontSize="small" />} label="Trending" size="small" color="error" />
+                              </Box>
+                              <Typography variant="h6" fontWeight={700} gutterBottom>{community.name}</Typography>
+                              <Typography variant="body2" color="text.secondary" mb={1}>
+                                {community.memberCount || 0} members
+                              </Typography>
+                              <Typography variant="body2" color="text.secondary" mb={2} noWrap>
+                                {community.description}
+                              </Typography>
+                              <Box mb={2}>
+                                <Chip label={community.categories?.[0] || 'General'} size="small" variant="outlined" />
+                              </Box>
+                              <Button fullWidth variant="outlined" onClick={() => handleJoinCommunity(community)} sx={{ fontWeight: 600 }}>
+                                Join Community
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        </Grid>
                       )
                     })
                   )}
@@ -798,15 +864,15 @@ const loadRecommendedCommunities = async () => {
                   <label htmlFor="cover-image-upload">
                     <Tooltip title="Upload Cover Image">
                       <IconButton component="span" disableRipple sx={{ p: 0 }}>
-                        <Avatar 
-                          src={newCommunityData.coverImage} 
+                        <Avatar
+                          src={newCommunityData.coverImage}
                           alt="Community Cover"
-                          sx={{ 
-                            width: 120, 
-                            height: 120, 
-                            bgcolor: 'primary.light', 
-                            border: '4px solid', 
-                            borderColor: 'primary.main', 
+                          sx={{
+                            width: 120,
+                            height: 120,
+                            bgcolor: 'primary.light',
+                            border: '4px solid',
+                            borderColor: 'primary.main',
                             cursor: 'pointer',
                             '&:hover': { transform: 'scale(1.05)', opacity: 0.8 }
                           }}
@@ -826,14 +892,47 @@ const loadRecommendedCommunities = async () => {
                     fullWidth
                     required
                   />
-                  <TextField
-                    label="Category"
-                    value={newCommunityData.categories}
-                    onChange={(e) => setNewCommunityData({ ...newCommunityData, categories: e.target.value })}
-                    fullWidth
-                    required
-                    helperText="e.g., Technology, Design, Business"
-                  />
+                  {/* Interests Multi-Select Dropdown */}
+                  <Grid item xs={12}>
+                     <InputLabel id="category-label">Select Category </InputLabel>
+                    <FormControl fullWidth size="small">
+                      <Select
+                        labelId="category-label"
+                        id="category-select"
+                        multiple
+                        value={newCommunityData.categories}
+                       onChange={(e) => setNewCommunityData({ ...newCommunityData, categories: e.target.value })}
+                        input={<OutlinedInput id="select-multiple-chip" label="Select Your Interests" />}
+                        renderValue={(selected) => (
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {selected.map((value) => (
+                              <Chip
+                                key={value}
+                                label={value}
+                                size="small"
+                                onDelete={handleDeleteCategory(value)}
+                                onMouseDown={(event) => {
+                                  event.stopPropagation();
+                                }}
+                              />
+                            ))}
+                          </Box>
+                        )}
+                        MenuProps={MenuProps}
+                        startAdornment={<InputAdornment position="start"><Favorite color="primary" /></InputAdornment>}
+                        disabled={loading}
+                      >
+                        {AVAILABLE_INTERESTS.map((category) => (
+                          <MenuItem
+                            key={category}
+                            value={category}
+                          >
+                            {category}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
                   <TextField
                     label="Description"
                     value={newCommunityData.description}
@@ -845,10 +944,10 @@ const loadRecommendedCommunities = async () => {
                   />
                 </Stack>
 
-                <Button 
-                  variant="contained" 
-                  color="primary" 
-                  onClick={handleCreateCommunity} 
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleCreateCommunity}
                   sx={{ mt: 4, py: 1.5, fontWeight: 700 }}
                   fullWidth
                   startIcon={<AddCircleIcon />}
@@ -892,21 +991,21 @@ const loadRecommendedCommunities = async () => {
                         <Typography variant="caption" color="text.secondary">{notif.time}</Typography>
                         {!notif.read && notif.type === 'invite' && (
                           <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                            <Button 
-                              size="small" 
-                              variant="contained" 
-                              startIcon={<CheckIcon />} 
-                              onClick={() => handleAcceptInvite(notif.id, notif.community)} 
+                            <Button
+                              size="small"
+                              variant="contained"
+                              startIcon={<CheckIcon />}
+                              onClick={() => handleAcceptInvite(notif.id, notif.community)}
                               sx={{ textTransform: 'none' }}
                             >
                               Accept
                             </Button>
-                            <Button 
-                              size="small" 
-                              variant="outlined" 
-                              color="error" 
-                              startIcon={<CloseIcon />} 
-                              onClick={() => handleDeclineInvite(notif.id)} 
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="error"
+                              startIcon={<CloseIcon />}
+                              onClick={() => handleDeclineInvite(notif.id)}
                               sx={{ textTransform: 'none' }}
                             >
                               Decline
@@ -932,13 +1031,13 @@ const loadRecommendedCommunities = async () => {
           </Box>
           <Divider sx={{ mb: 2 }} />
           <Box sx={{ textAlign: 'center', mb: 3, pb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-            <Avatar 
-              src={profileData?.profileImage} 
-              sx={{ 
-                bgcolor: '#1e40af', 
-                width: 80, 
-                height: 80, 
-                mx: 'auto', 
+            <Avatar
+              src={profileData?.profileImage}
+              sx={{
+                bgcolor: '#1e40af',
+                width: 80,
+                height: 80,
+                mx: 'auto',
                 mb: 2,
                 fontSize: 32
               }}
@@ -952,10 +1051,10 @@ const loadRecommendedCommunities = async () => {
             <Button
               variant="outlined"
               startIcon={<EditIcon />}
-              onClick={() => { 
-                setEditData({ ...profileData }); 
+              onClick={() => {
+                setEditData({ ...profileData });
                 setEditProfileDialog(true);
-                setSettingsDrawer(false); // Close settings drawer when opening edit dialog
+                setSettingsDrawer(false);
               }}
               sx={{ textTransform: 'none' }}
             >
@@ -964,13 +1063,16 @@ const loadRecommendedCommunities = async () => {
           </Box>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <Box>
-              <Typography variant="subtitle2" gutterBottom>Bio</Typography>
+              <Typography variant="subtitle1" sx={{fontWeight:"600" , display:"flex"}} gutterBottom>
+                Bio  <Lightbulb sx={{color:"yellow" ,  pl:1}}/> 
+                </Typography>
               <Typography variant="body2" color="text.secondary">
                 {profileData?.bio || 'No bio yet'}
               </Typography>
             </Box>
             <Box>
-              <Typography variant="subtitle2" gutterBottom>Interests</Typography>
+              <Typography variant="subtitle1" sx={{fontWeight:"600" , display:"flex"}} gutterBottom>
+                Interests <Interests sx={{color:"red" ,  pl:1}}/></Typography>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 {profileData?.interests?.length > 0 ? (
                   profileData.interests.map((interest, idx) => (
@@ -982,7 +1084,8 @@ const loadRecommendedCommunities = async () => {
               </Box>
             </Box>
             <Box>
-              <Typography variant="subtitle2" gutterBottom>Statistics</Typography>
+              <Typography variant="subtitle1"  sx={{fontWeight:"600" , display:"flex"}} gutterBottom>
+                Statistics <QueryStats sx={{color:"blue" , pl:1}}/> </Typography>
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                 <Typography variant="body2" color="text.secondary">Communities</Typography>
                 <Typography variant="body2" fontWeight={700}>{myCommunities.length}</Typography>
@@ -990,7 +1093,19 @@ const loadRecommendedCommunities = async () => {
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                 <Typography variant="body2" color="text.secondary">Member Since</Typography>
                 <Typography variant="body2" fontWeight={700}>
-                  {profileData?.joinDate ? new Date(profileData.joinDate).toLocaleDateString() : 'N/A'}
+                  {profileData?.createdAt ? new Date(profileData.createdAt).toDateString() : 'N/A'}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Typography variant="body2" color="text.secondary">Verified</Typography>
+                <Typography variant="body2" fontWeight={700}>
+                  {profileData?.isEmailVerified === true ? 'Yes' : 'No'}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Typography variant="body2" color="text.secondary">Last Login</Typography>
+                <Typography variant="body2" fontWeight={700}>
+                {profileData?.lastLogin ? new Date(profileData.lastLogin).toLocaleTimeString() : 'N/A'}
                 </Typography>
               </Box>
             </Box>
@@ -1003,7 +1118,7 @@ const loadRecommendedCommunities = async () => {
         <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>Edit Profile</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 2 }}>
-            
+
             {/* Profile Image Upload Section */}
             <Box display="flex" flexDirection="column" alignItems="center">
               <input
@@ -1016,15 +1131,15 @@ const loadRecommendedCommunities = async () => {
               <label htmlFor="profile-image-upload">
                 <Tooltip title="Upload Profile Picture">
                   <IconButton component="span" disableRipple sx={{ p: 0 }}>
-                    <Avatar 
-                      src={editData.profileImage || profileData?.profileImage} 
+                    <Avatar
+                      src={editData.profileImage || profileData?.profileImage}
                       alt="Profile"
-                      sx={{ 
-                        width: 100, 
-                        height: 100, 
-                        bgcolor: '#1e40af', 
-                        border: '4px solid', 
-                        borderColor: 'primary.main', 
+                      sx={{
+                        width: 100,
+                        height: 100,
+                        bgcolor: '#1e40af',
+                        border: '4px solid',
+                        borderColor: 'primary.main',
                         cursor: 'pointer',
                         transition: 'transform 0.2s',
                         fontSize: 40,
@@ -1047,31 +1162,31 @@ const loadRecommendedCommunities = async () => {
             </Box>
 
             {/* Name Field */}
-            <TextField 
-              label="Name" 
-              value={editData.name || ''} 
-              onChange={(e) => setEditData({ ...editData, name: e.target.value })} 
-              fullWidth 
+            <TextField
+              label="Name"
+              value={editData.name || ''}
+              onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+              fullWidth
               required
             />
 
             {/* Email Field (Disabled) */}
-            <TextField 
-              label="Email" 
-              value={editData.email || ''} 
-              disabled 
-              fullWidth 
+            <TextField
+              label="Email"
+              value={editData.email || ''}
+              disabled
+              fullWidth
               helperText="Email cannot be changed"
             />
 
             {/* Bio Field */}
-            <TextField 
-              label="Bio" 
-              value={editData.bio || ''} 
-              onChange={(e) => setEditData({ ...editData, bio: e.target.value })} 
-              multiline 
-              rows={3} 
-              fullWidth 
+            <TextField
+              label="Bio"
+              value={editData.bio || ''}
+              onChange={(e) => setEditData({ ...editData, bio: e.target.value })}
+              multiline
+              rows={3}
+              fullWidth
               placeholder="Tell us about yourself..."
             />
 
@@ -1112,8 +1227,8 @@ const loadRecommendedCommunities = async () => {
           <Button onClick={() => setEditProfileDialog(false)} variant="outlined">
             Cancel
           </Button>
-          <Button 
-            onClick={handleSaveProfile} 
+          <Button
+            onClick={handleSaveProfile}
             variant="contained"
             disabled={!editData.name || editData.interests?.length === 0}
           >
@@ -1123,9 +1238,9 @@ const loadRecommendedCommunities = async () => {
       </Dialog>
 
       {/* Snackbar for notifications */}
-      <Snackbar 
-        open={snackbar.open} 
-        autoHideDuration={6000} 
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
