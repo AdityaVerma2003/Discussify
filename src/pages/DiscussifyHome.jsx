@@ -15,8 +15,8 @@ import { blue, grey, green, red, deepOrange } from '@mui/material/colors';
 import CommunityCard from '../components/CommunityCard' // From previous response
 import FeatureCard from '../components/FeatureCard'; // New component above
 import Navbar from '../components/Navbar'; // Updated Navbar component
-import HeroSection from './HeroSection';
-import HowItWorksSection from './HowItWorksSection';
+import HeroSection from '../components/HeroSection';
+import HowItWorksSection from '../components/HowItWorksSection';
 import AppFooter from '../components/AppFooter';
 import { useNavigate } from 'react-router-dom';
 

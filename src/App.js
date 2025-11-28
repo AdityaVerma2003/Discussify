@@ -1,9 +1,8 @@
 // src/App.js
 import { ThemeProvider } from '@mui/material/styles';
-import DiscussifyHome from './components/DiscussifyHome';
+import DiscussifyHome from './pages/DiscussifyHome';
 import theme from './theme';
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
-import RegistrationPage from './pages/RegistrationPage';
 import LoginPage from './pages/LoginPage';
 import NotFoundPage from './pages/NotFoundPage';
 import UserDashboard from './pages/UserDashboard';

@@ -15,7 +15,7 @@ const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024; // 5MB
 const REGISTER_API_URL = 'http://localhost:3001/api/v1/auth/register';
 const VERIFY_API_URL = 'http://localhost:3001/api/v1/auth/verify-email';
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-const USERNAME_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9._]{1,18}[a-zA-Z0-9]$|^[a-zA-Z0-9]{3,20}$/; 
+const USERNAME_REGEX = /^[a-zA-Z0-9_ ]{3,20}$/; 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Community Categories (Must match your backend enum exactly)
@@ -377,7 +377,6 @@ const RegistrationPage = ({ onNavigate, onRegistrationSuccess }) => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        // The value from a multiple select will be an array, otherwise it's a string/number
         setFormData(prev => ({ ...prev, [name]: value }));
         if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
     };
@@ -525,12 +524,17 @@ const RegistrationPage = ({ onNavigate, onRegistrationSuccess }) => {
 
                         {/* Username Field */}
                         <Grid item xs={12}>
-                            <TextField fullWidth required label="Username (3-20 chars)" name="username" value={formData.username} onChange={handleChange} onBlur={handleBlur} error={!!errors.username} helperText={errors.username || "Required. Only letters, numbers, '.', and '_' allowed."} InputProps={{ startAdornment: (<InputAdornment position="start"><AccountCircle /></InputAdornment>),}} disabled={loading}/>
+                            <TextField fullWidth required label="Username (3-20 chars)" name="username" 
+                            value={formData.username} 
+                            onChange={handleChange} 
+                            onBlur={handleBlur} 
+                            error={!!errors.username} helperText={errors.username || "Required. Only letters, numbers, '.', and '_' allowed."} InputProps={{ startAdornment: (<InputAdornment position="start"><AccountCircle /></InputAdornment>),}} disabled={loading}/>
                         </Grid>
 
                         {/* Email Field */}
                         <Grid item xs={12}>
-                            <TextField fullWidth required label="Email Address" name="email" type="email" value={formData.email} onChange={handleChange} onBlur={handleBlur} error={!!errors.email} helperText={errors.email || "Required. Must be a valid format (e.g., user@domain.com)."} InputProps={{ startAdornment: (<InputAdornment position="start"><Email /></InputAdornment>),}} disabled={loading}/>
+                            <TextField fullWidth required 
+                            label="Email Address" name="email" type="email" value={formData.email} onChange={handleChange} onBlur={handleBlur} error={!!errors.email} helperText={errors.email || "Required. Must be a valid format (e.g., user@domain.com)."} InputProps={{ startAdornment: (<InputAdornment position="start"><Email /></InputAdornment>),}} disabled={loading}/>
                         </Grid>
 
                         {/* Password Field */}
