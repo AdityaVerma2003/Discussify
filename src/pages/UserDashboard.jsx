@@ -467,23 +467,23 @@ export default function UserDashboard() {
 
   const handleMarkAllAsRead = async () => {
     try {
-         await clearAllNotifications();
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-        showSnackbar('All notifications marked as read', 'success');
+      await clearAllNotifications();
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      showSnackbar('All notifications marked as read', 'success');
     } catch (err) {
-        console.error('Error marking all as read:', err);
-        showSnackbar('Failed to mark all notifications as read', 'error');
+      console.error('Error marking all as read:', err);
+      showSnackbar('Failed to mark all notifications as read', 'error');
     }
-};
+  };
 
-const handleMarkAsRead = async (notifId) => {
+  const handleMarkAsRead = async (notifId) => {
     try {
-        await deleteNotification(notifId);
-        setNotifications(prev => prev.map(n => n._id === notifId ? { ...n, read: true } : n));
+      await deleteNotification(notifId);
+      setNotifications(prev => prev.map(n => n._id === notifId ? { ...n, read: true } : n));
     } catch (err) {
-        console.error('Error marking as read:', err);
+      console.error('Error marking as read:', err);
     }
-};
+  };
 
   const unreadCount = notifications.filter(n => !n.read).length;
   const filteredMyCommunities = myCommunities;
@@ -495,11 +495,7 @@ const handleMarkAsRead = async (notifId) => {
     { name: 'Create Community', icon: AddCircleIcon },
   ];
 
-  // Utility functions for Create Community Tab
-  const handleDeleteCategory = (chipToDelete) => (event) => {
-    // Prevent the event from bubbling up to the Select component
-    event.stopPropagation();
-
+  const handleDeleteCategory = (chipToDelete) => {
     setNewCommunityData((prev) => ({
       ...prev,
       categories: prev.categories.filter((category) => category !== chipToDelete),
@@ -894,7 +890,10 @@ const handleMarkAsRead = async (notifId) => {
                             <Chip
                               key={value}
                               label={value}
-                              onDelete={handleDeleteCategory(value)}
+                              onDelete={(event) => {
+                                event.stopPropagation(); // Stop event from bubbling to the Select
+                                handleDeleteCategory(value); // Call the simple function to update state
+                              }}
                               onClick={(event) => event.stopPropagation()} // Prevent select menu from opening on chip click
                             />
                           ))}
@@ -995,7 +994,7 @@ const handleMarkAsRead = async (notifId) => {
         <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
             <Typography variant="h5" fontWeight={700}>
-              Notifications 
+              Notifications
               <Badge badgeContent={unreadCount} color="error" sx={{ ml: 1 }}>
                 <NotificationsIcon />
               </Badge>
@@ -1004,13 +1003,13 @@ const handleMarkAsRead = async (notifId) => {
               <CloseIcon />
             </IconButton>
           </Stack>
-          
+
           <Divider sx={{ mb: 2 }} />
-          
+
           {unreadCount > 0 && (
-            <Button 
-              fullWidth 
-              variant="text" 
+            <Button
+              fullWidth
+              variant="text"
               color="primary"
               onClick={handleMarkAllAsRead}
               startIcon={<CheckIcon />}
@@ -1035,18 +1034,18 @@ const handleMarkAsRead = async (notifId) => {
                 const bgColor = notif.read ? 'white' : '#e0f2fe'; // Light blue for unread
 
                 return (
-                  <Paper 
-                    key={notif._id} 
+                  <Paper
+                    key={notif._id}
                     elevation={0}
-                    sx={{ 
-                      mb: 1.5, 
-                      p: 2, 
-                      bgcolor: bgColor, 
+                    sx={{
+                      mb: 1.5,
+                      p: 2,
+                      bgcolor: bgColor,
                       borderRadius: 2,
                       borderLeft: notif.read ? 'none' : '4px solid #0288d1', // Highlight unread
                       cursor: notif.read ? 'default' : 'pointer',
-                      '&:hover': { 
-                          bgcolor: notif.read ? '#f5f5f5' : '#b3e5fc' 
+                      '&:hover': {
+                        bgcolor: notif.read ? '#f5f5f5' : '#b3e5fc'
                       }
                     }}
                     onClick={() => !notif.read && handleMarkAsRead(notif._id)}
@@ -1057,41 +1056,41 @@ const handleMarkAsRead = async (notifId) => {
                           <IconComponent fontSize="small" />
                         </Avatar>
                       </ListItemAvatar>
-                      <ListItemText 
+                      <ListItemText
                         primary={
                           <Stack direction="row" justifyContent="space-between" alignItems="center">
                             <Typography variant="subtitle2" fontWeight={700}>
                               {notif.title}
                             </Typography>
                             {!notif.read && (
-                                <Badge variant="dot" color="error" />
+                              <Badge variant="dot" color="error" />
                             )}
                           </Stack>
-                        } 
+                        }
                         secondary={
                           <React.Fragment>
                             <Typography
-                                component="span"
-                                variant="body2"
-                                color="text.primary"
-                                sx={{ display: 'block', mt: 0.5 }}
+                              component="span"
+                              variant="body2"
+                              color="text.primary"
+                              sx={{ display: 'block', mt: 0.5 }}
                             >
-                                {notif.message}
+                              {notif.message}
                             </Typography>
                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                                {new Date(notif.createdAt).toLocaleString()}
+                              {new Date(notif.createdAt).toLocaleString()}
                             </Typography>
                           </React.Fragment>
-                        } 
+                        }
                       />
                     </ListItem>
 
                     {/* Invitation Action Buttons */}
                     {isInvite && !notif.read && (
                       <Stack direction="row" spacing={1} justifyContent="flex-end" mt={1.5} pr={1}>
-                        <Button 
-                          size="small" 
-                          variant="contained" 
+                        <Button
+                          size="small"
+                          variant="contained"
                           color="success"
                           startIcon={<CheckIcon />}
                           onClick={(e) => {
@@ -1101,9 +1100,9 @@ const handleMarkAsRead = async (notifId) => {
                         >
                           Accept
                         </Button>
-                        <Button 
-                          size="small" 
-                          variant="outlined" 
+                        <Button
+                          size="small"
+                          variant="outlined"
                           color="error"
                           startIcon={<CloseIcon />}
                           onClick={(e) => {
@@ -1219,7 +1218,7 @@ const handleMarkAsRead = async (notifId) => {
                   window.location.href = '/login';
                 }}
                 variant="contained"
-                sx={{ mt: 2, mb: 2, py: 1.5, borderRadius: 2, fontWeight: 700 , bgcolor: 'red' }}
+                sx={{ mt: 2, mb: 2, py: 1.5, borderRadius: 2, fontWeight: 700, bgcolor: 'red' }}
                 startIcon={<Logout />}
               >
                 Logout

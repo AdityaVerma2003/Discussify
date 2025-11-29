@@ -102,7 +102,6 @@ const CommunityPage = ({ community, userId, goBack, userAvatar, showSnackbar }) 
         // Append core data
         formData.append('content', newPostContent.trim());
         formData.append('communityId', communityId);
-        formData.append('title', newPostContent.trim().substring(0, 50)); // Simple title from content
 
         // Append file if exists. The backend expects 'file' as the field name.
         if (attachedFile) {
@@ -110,9 +109,8 @@ const CommunityPage = ({ community, userId, goBack, userAvatar, showSnackbar }) 
         }
 
         // The backend API handles saving and emitting the socket event.
-        await createPostAPI(formData); 
-        
-        // Reset inputs
+        const response = await createPostAPI(formData);   
+        setPosts(prev => [...prev, response.post]);     
         setNewPostContent('');
         setAttachedFile(null);
         
@@ -177,7 +175,8 @@ const CommunityPage = ({ community, userId, goBack, userAvatar, showSnackbar }) 
                 post={post} 
                 community={community} 
                 currentUserId={userId} 
-                onPostUpdate={handlePostUpdate} // Pass handler for local updates
+                onPostUpdate={handlePostUpdate}
+                showSnackbar={showSnackbar} // Pass handler for local updates
             />
           ))
         )}
