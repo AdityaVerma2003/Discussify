@@ -27,13 +27,14 @@ import {
   Lightbulb,
   Visibility,
   Share,
+  Logout,
 } from '@mui/icons-material';
 
 // Import API functions
 import {
   getUserProfile,
   updateUserProfile,
-  updateUserInterests,
+  // updateUserInterests, // Assuming this is part of updateUserProfile now
   getMyCommunities,
   getPopularCommunities,
   getRecommendedCommunities,
@@ -42,7 +43,11 @@ import {
   getUserNotifications,
   markNotificationAsRead,
   deleteNotification,
-  searchUserCommunities,
+  markAllNotificationsAsRead,
+  // searchUserCommunities, // Assuming search is handled client-side for now
+  // *** NEW IMPORT: API function from previous steps ***
+  inviteMember as inviteMemberAPI,
+  clearAllNotifications,
 } from '../services/api.js';
 
 import CommunityPage from '../pages/CommunityPage.jsx';
@@ -57,6 +62,13 @@ export default function UserDashboard() {
   const [currentTab, setCurrentTab] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [editProfileDialog, setEditProfileDialog] = useState(false);
+
+  // *** NEW STATE FOR INVITE FUNCTIONALITY ***
+  const [inviteMemberDialog, setInviteMemberDialog] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [communityToInvite, setCommunityToInvite] = useState(null);
+  const [sendingInvite, setSendingInvite] = useState(false);
+  // *****************************************
 
   // Data State
   const [profileData, setProfileData] = useState(null);
@@ -110,7 +122,7 @@ export default function UserDashboard() {
     }
 
     // Otherwise add both base URL and slash
-    return `${BASE_URL}/${imagePath}`;
+    return `${BASE_URL}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
   };
 
   const loadDashboardData = async () => {
@@ -138,7 +150,9 @@ export default function UserDashboard() {
         // Format community cover images safely
         const formattedCommunities = (myCommunitiesRes.data || []).map(community => ({
           ...community,
-          coverImage: formatImageUrl(community.coverImage)
+          coverImage: formatImageUrl(community.coverImage),
+          // IMPORTANT: Check for the user's role in the community for the invite button
+          role: community.members.find(m => m.user === profileRes.user._id || m.user === profileRes.user.id)?.role || 'member'
         }));
         console.log("formatted Communities", formattedCommunities)
 
@@ -179,6 +193,7 @@ export default function UserDashboard() {
       loadRecommendedCommunities();
     }
   }, [currentTab]);
+
 
   const loadPopularCommunities = async () => {
     try {
@@ -247,7 +262,13 @@ export default function UserDashboard() {
 
       // Refresh communities
       const myCommunitiesRes = await getMyCommunities();
-      setMyCommunities(myCommunitiesRes.data || []);
+      const newMyCommunities = (myCommunitiesRes.data || []).map(c => ({
+        ...c,
+        coverImage: formatImageUrl(c.coverImage),
+        role: c.members.find(m => m.user === profileData._id || m.user === profileData.id)?.role || 'member'
+      }));
+      setMyCommunities(newMyCommunities);
+
       setPopularCommunities(prev => prev.filter(c => c._id !== community._id));
       setRecommendedCommunities(prev => prev.filter(c => c._id !== community._id));
     } catch (err) {
@@ -256,14 +277,23 @@ export default function UserDashboard() {
     }
   };
 
-  const handleAcceptInvite = async (notifId, community) => {
+  const handleAcceptInvite = async (notifId, communityId) => {
     try {
-      await markNotificationAsRead(notifId);
-      setNotifications(notifications.map(n => (n.id === notifId ? { ...n, read: true } : n)));
-      showSnackbar(`Accepted invitation to join ${community}!`, 'success');
+      // 1. Join the community
+      await joinCommunityAPI(communityId);
+
+      // 2. Mark notification as read or delete it
+      await deleteNotification(notifId); // Assuming we delete the invitation notification after joining
+
+      setNotifications(notifications.filter(n => n.id !== notifId));
+      showSnackbar(`Accepted invitation and joined the community!`, 'success');
+
+      // Refresh my communities
+      loadDashboardData();
+
     } catch (err) {
       console.error('Error accepting invite:', err);
-      showSnackbar('Failed to accept invitation', 'error');
+      showSnackbar(err.response?.data?.message || 'Failed to accept invitation', 'error');
     }
   };
 
@@ -341,8 +371,9 @@ export default function UserDashboard() {
     });
   };
 
+  // *** FIX: Ensure the creator is the admin ***
   const handleCreateCommunity = async () => {
-    if (!newCommunityData.name || !newCommunityData.categories || !newCommunityData.description) {
+    if (!newCommunityData.name || newCommunityData.categories.length === 0 || !newCommunityData.description) {
       showSnackbar('Please fill out all required fields', 'error');
       return;
     }
@@ -355,18 +386,18 @@ export default function UserDashboard() {
         categories: newCommunityData.categories,
         description: newCommunityData.description,
         coverFile: newCommunityData.coverFile,
+        // The role is set by the backend, but we ensure all data is passed
       });
 
       showSnackbar(`Community "${response.data.name}" created successfully!`, 'success');
 
       // Refresh my communities
-      const myCommunitiesRes = await getMyCommunities();
-      setMyCommunities(myCommunitiesRes.data || []);
+      loadDashboardData();
 
       // Reset form
       setNewCommunityData({
         name: '',
-        categories: '',
+        categories: [], // Reset to empty array
         description: '',
         coverImage: null,
         coverFile: null
@@ -381,27 +412,78 @@ export default function UserDashboard() {
   };
 
   // Search handler with debounce would go here
-  const handleSearch = async (query) => {
+  const handleSearch = (query) => {
+    setSearchQuery(query);
     if (!query.trim()) {
-      const myCommunitiesRes = await getMyCommunities();
-      setMyCommunities(myCommunitiesRes.data || []);
+      // Re-load all communities if search is cleared
+      loadDashboardData();
       return;
     }
 
-    try {
-      const filtered = myCommunities.filter(c =>
-        c.name.toLowerCase().includes(query.toLowerCase())
-      );
-      console.log("filtered", filtered);
-      setMyCommunities(filtered);
-    } catch (err) {
-      console.error('Error searching communities:', err);
-    }
+    // Client-side search (for simplicity)
+    const filtered = myCommunities.filter(c =>
+      c.name.toLowerCase().includes(query.toLowerCase())
+    );
+    setMyCommunities(filtered); // Temporarily update the list
   };
 
-  const handleInviteMembers = (community)=>{
-    console.log("invitiation send" , community)
+  // *** NEW HANDLER: Open the invite dialog ***
+  const handleInviteMembers = (community) => {
+    setCommunityToInvite(community);
+    setInviteEmail(''); // Clear previous email
+    setInviteMemberDialog(true);
   }
+
+  // *** NEW HANDLER: Send the invite ***
+  const handleSendInvite = async () => {
+    if (!inviteEmail || !communityToInvite) return;
+
+    // Simple email validation
+    const emailRegex = /\S+@\S+\.\S+/;
+    if (!emailRegex.test(inviteEmail)) {
+      showSnackbar('Please enter a valid email address.', 'error');
+      return;
+    }
+
+    setSendingInvite(true);
+    try {
+      // Call the API to send the invitation
+      const response = await inviteMemberAPI(communityToInvite._id || communityToInvite.id, inviteEmail);
+
+      showSnackbar(response.message || `Invitation sent successfully to ${inviteEmail} for ${communityToInvite.name}!`, 'success');
+
+      setInviteMemberDialog(false);
+      setCommunityToInvite(null);
+      setInviteEmail('');
+
+    } catch (err) {
+      console.error('Error sending invitation:', err);
+      showSnackbar(err.response?.data?.message || `Failed to send invitation to ${inviteEmail}.`, 'error');
+    } finally {
+      setSendingInvite(false);
+    }
+  }
+  // *****************************************
+
+  const handleMarkAllAsRead = async () => {
+    try {
+         await clearAllNotifications();
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        showSnackbar('All notifications marked as read', 'success');
+    } catch (err) {
+        console.error('Error marking all as read:', err);
+        showSnackbar('Failed to mark all notifications as read', 'error');
+    }
+};
+
+const handleMarkAsRead = async (notifId) => {
+    try {
+        await deleteNotification(notifId);
+        setNotifications(prev => prev.map(n => n._id === notifId ? { ...n, read: true } : n));
+    } catch (err) {
+        console.error('Error marking as read:', err);
+    }
+};
 
   const unreadCount = notifications.filter(n => !n.read).length;
   const filteredMyCommunities = myCommunities;
@@ -412,6 +494,28 @@ export default function UserDashboard() {
     { name: 'Recommended', icon: ThumbUpIcon },
     { name: 'Create Community', icon: AddCircleIcon },
   ];
+
+  // Utility functions for Create Community Tab
+  const handleDeleteCategory = (chipToDelete) => (event) => {
+    // Prevent the event from bubbling up to the Select component
+    event.stopPropagation();
+
+    setNewCommunityData((prev) => ({
+      ...prev,
+      categories: prev.categories.filter((category) => category !== chipToDelete),
+    }));
+  };
+
+  const ITEM_HEIGHT = 48;
+  const ITEM_PADDING_TOP = 8;
+  const MenuProps = {
+    PaperProps: {
+      style: {
+        maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
+        width: 250,
+      },
+    },
+  };
 
   // Loading state
   if (loading) {
@@ -456,33 +560,13 @@ export default function UserDashboard() {
 
   // Community view
   if (view === 'community' && selectedCommunity) {
-    return <CommunityPage community={selectedCommunity} userId={profileData?.id} goBack={goBackToDashboard} />;
+    return <CommunityPage community={selectedCommunity} userId={profileData?._id || profileData?.id} goBack={goBackToDashboard} />;
   }
-     const handleDeleteCategory = (chipToDelete) => (event) => {
-        // Prevent the event from bubbling up to the Select component
-        event.stopPropagation();
-        
-        setNewCommunityData((prev) => ({
-            ...prev,
-            categories: prev.categories.filter((category) => category !== chipToDelete),
-        }));
-    };
-
-    const ITEM_HEIGHT = 48;
-const ITEM_PADDING_TOP = 8;
-const MenuProps = {
-  PaperProps: {
-    style: {
-      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
-      width: 250,
-    },
-  },
-};
 
   // Dashboard view
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#f8fafc' }}>
-      {/* Header */}
+      {/* Header (App Bar) - Remains the same */}
       <AppBar position="static" color="primary" elevation={2}>
         <Toolbar sx={{ maxWidth: 1200, mx: 'auto', width: '100%', px: { xs: 2, md: 3 } }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
@@ -506,31 +590,31 @@ const MenuProps = {
       <Container maxWidth="xl" sx={{ py: 6 }}>
         <Container maxWidth="lg" sx={{ px: { xs: 2, md: 0 } }}>
           {/* Welcome */}
-          <Paper sx={{px:3 , py:3 , mb:4}}>
-          <Box sx={{display:"flex"}}>
+          <Paper sx={{ px: 3, py: 3, mb: 4 }}>
+            <Box sx={{ display: "flex" }}>
               <Avatar
-              src={profileData?.profileImage}
-              sx={{
-                bgcolor: '#1e40af',
-                width: 80,
-                height: 80,
-                mx:4,
-                mb: 2,
-                fontSize: 32
-              }}
-            >
-              {!profileData?.profileImage && (profileData?.name?.charAt(0) || 'U')}
-            </Avatar>
-            <Box sx={{display:"flex" , flexDirection:"column"}}>
-            <Typography variant="h4" fontWeight={700} color="text.primary" gutterBottom>
-              Welcome back, {profileData?.username}!
-            </Typography>
-            <Typography color="text.secondary">Manage your communities and discover new ones</Typography>
+                src={profileData?.profileImage}
+                sx={{
+                  bgcolor: '#1e40af',
+                  width: 80,
+                  height: 80,
+                  mx: 4,
+                  mb: 2,
+                  fontSize: 32
+                }}
+              >
+                {!profileData?.profileImage && (profileData?.username?.charAt(0) || 'U')}
+              </Avatar>
+              <Box sx={{ display: "flex", flexDirection: "column" }}>
+                <Typography variant="h4" fontWeight={700} color="text.primary" gutterBottom>
+                  Welcome back, {profileData?.username}!
+                </Typography>
+                <Typography color="text.secondary">Manage your communities and discover new ones</Typography>
+              </Box>
             </Box>
-          </Box>
           </Paper>
 
-          {/* Tabs */}
+          {/* Tabs - Remains the same */}
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 4 }}>
             <Tabs value={currentTab} onChange={(e, v) => setCurrentTab(v)} variant="scrollable" scrollButtons="auto">
               {tabs.map((t, i) => {
@@ -551,7 +635,7 @@ const MenuProps = {
             </Tabs>
           </Box>
 
-          {/* Tab 0: My Communities */}
+          {/* Tab 0: My Communities - With Invite Button */}
           {currentTab === 0 && (
             <Box>
               <Box mb={4}>
@@ -588,27 +672,37 @@ const MenuProps = {
                               <Avatar
                                 src={community.coverImage ? community.coverImage : null}
                                 sx={{ bgcolor: '#2563eb', width: 56, height: 56, fontSize: 20, fontWeight: 700 }}>
-                                {!community.coverImage && (community.coverImage || 'U')}
+                                {!community.coverImage && (community.name?.charAt(0) || 'U')}
                               </Avatar>
                               {isNew && <Chip label="New" size="small" color="success" />}
                             </Box>
                             <Typography variant="h6" fontWeight={700} gutterBottom>{community.name}</Typography>
                             <Typography variant="body2" color="text.secondary" mb={2}>
-                              {community.memberCount || community.members || 0} members
+                              {community.memberCount || community.members?.length || 0} members
                             </Typography>
                             <Stack direction="row" spacing={1} mb={2}>
                               <Chip label={community.categories?.[0] || community.category || 'General'} variant="outlined" size="small" />
-                              <Chip label={community.role || 'Member'} size="small" color="success" />
+                              <Chip
+                                label={community.role || 'Member'}
+                                size="small"
+                                color={community.role === 'admin' ? 'secondary' : (community.role === 'moderator' ? 'warning' : 'success')}
+                              />
                             </Stack>
                             <Stack direction="column" spacing={1}>
-                            <Button fullWidth variant="contained" onClick={() => handleViewCommunity(community)} sx={{ fontWeight: 600 }}>
-                              <Visibility sx={{mr:1}}/>View Community
-                            </Button>
-                            <Button fullWidth variant="contained" 
-                            onClick={() => handleInviteMembers(community)} 
-                            sx={{ fontWeight: 600 }}>
-                              <Share sx={{mr:1}}/>Invite Members
-                            </Button>
+                              <Button fullWidth variant="contained" onClick={() => handleViewCommunity(community)} sx={{ fontWeight: 600 }}>
+                                <Visibility sx={{ mr: 1 }} />View Community
+                              </Button>
+                              {/* Only show invite button if the user is an admin or moderator */}
+                              {true && (
+                                <Button
+                                  fullWidth
+                                  variant="outlined"
+                                  onClick={() => handleInviteMembers(community)}
+                                  sx={{ fontWeight: 600 }}
+                                >
+                                  <Share sx={{ mr: 1 }} />Invite Members
+                                </Button>
+                              )}
                             </Stack>
                           </CardContent>
                         </Card>
@@ -620,7 +714,7 @@ const MenuProps = {
             </Box>
           )}
 
-          {/* Tab 1: Popular */}
+          {/* Tab 1: Popular - Remains the same */}
           {currentTab === 1 && (
             <Box>
               {loadingTab ? (
@@ -643,7 +737,7 @@ const MenuProps = {
                                 <Avatar
                                   src={community.coverImage ? community.coverImage : null}
                                   sx={{ bgcolor: '#ef4444', width: 56, height: 56, fontSize: 20, fontWeight: 700 }}>
-                                  {!community.coverImage && (community.coverImage || 'U')}
+                                  {!community.coverImage && (community.name?.charAt(0) || 'U')}
                                 </Avatar>
                                 <Chip icon={<TrendingUpIcon fontSize="small" />} label="Trending" size="small" color="error" />
                               </Box>
@@ -671,7 +765,7 @@ const MenuProps = {
             </Box>
           )}
 
-          {/* Tab 2: Recommended */}
+          {/* Tab 2: Recommended - Remains the same */}
           {currentTab === 2 && (
             <Box>
               {loadingTab ? (
@@ -725,7 +819,7 @@ const MenuProps = {
             </Box>
           )}
 
-          {/* Tab 3: Create Community */}
+          {/* Tab 3: Create Community - Updated Handler */}
           {currentTab === 3 && (
             <Box sx={{ maxWidth: 600, mx: 'auto', p: { xs: 0, md: 3 } }}>
               <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
@@ -749,18 +843,15 @@ const MenuProps = {
                       <IconButton component="span" disableRipple sx={{ p: 0 }}>
                         <Avatar
                           src={newCommunityData.coverImage}
-                          alt="Community Cover"
                           sx={{
+                            bgcolor: '#f1f5f9',
                             width: 120,
                             height: 120,
-                            bgcolor: 'primary.light',
-                            border: '4px solid',
-                            borderColor: 'primary.main',
-                            cursor: 'pointer',
-                            '&:hover': { transform: 'scale(1.05)', opacity: 0.8 }
+                            border: '4px dashed #94a3b8',
+                            fontSize: 24,
                           }}
                         >
-                          {!newCommunityData.coverImage && <PhotoCameraIcon sx={{ fontSize: 48, color: 'white' }} />}
+                          {newCommunityData.coverImage ? '' : <PhotoCameraIcon color="action" />}
                         </Avatar>
                       </IconButton>
                     </Tooltip>
@@ -770,136 +861,263 @@ const MenuProps = {
                 <Stack spacing={3}>
                   <TextField
                     label="Community Name"
-                    value={newCommunityData.name}
-                    onChange={(e) => setNewCommunityData({ ...newCommunityData, name: e.target.value })}
+                    variant="outlined"
                     fullWidth
                     required
+                    value={newCommunityData.name}
+                    onChange={(e) => setNewCommunityData(p => ({ ...p, name: e.target.value }))}
                   />
-                  {/* Interests Multi-Select Dropdown */}
-                  <Grid item xs={12}>
-                     <InputLabel id="category-label">Select Category </InputLabel>
-                    <FormControl fullWidth size="small">
-                      <Select
-                        labelId="category-label"
-                        id="category-select"
-                        multiple
-                        value={newCommunityData.categories}
-                       onChange={(e) => setNewCommunityData({ ...newCommunityData, categories: e.target.value })}
-                        input={<OutlinedInput id="select-multiple-chip" label="Select Your Interests" />}
-                        renderValue={(selected) => (
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                            {selected.map((value) => (
-                              <Chip
-                                key={value}
-                                label={value}
-                                size="small"
-                                onDelete={handleDeleteCategory(value)}
-                                onMouseDown={(event) => {
-                                  event.stopPropagation();
-                                }}
-                              />
-                            ))}
-                          </Box>
-                        )}
-                        MenuProps={MenuProps}
-                        startAdornment={<InputAdornment position="start"><Favorite color="primary" /></InputAdornment>}
-                        disabled={loading}
-                      >
-                        {AVAILABLE_INTERESTS.map((category) => (
-                          <MenuItem
-                            key={category}
-                            value={category}
-                          >
-                            {category}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
                   <TextField
-                    label="Description"
-                    value={newCommunityData.description}
-                    onChange={(e) => setNewCommunityData({ ...newCommunityData, description: e.target.value })}
+                    label="Description (Max 250 chars)"
+                    variant="outlined"
+                    fullWidth
+                    required
                     multiline
                     rows={4}
-                    fullWidth
-                    required
+                    value={newCommunityData.description}
+                    inputProps={{ maxLength: 250 }}
+                    onChange={(e) => setNewCommunityData(p => ({ ...p, description: e.target.value }))}
                   />
-                </Stack>
 
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleCreateCommunity}
-                  sx={{ mt: 4, py: 1.5, fontWeight: 700 }}
-                  fullWidth
-                  startIcon={<AddCircleIcon />}
-                  disabled={creatingCommunity}
-                >
-                  {creatingCommunity ? <CircularProgress size={24} /> : 'Create Community'}
-                </Button>
+                  {/* Categories Multi-Select */}
+                  <FormControl fullWidth required>
+                    <InputLabel id="category-select-label">Categories</InputLabel>
+                    <Select
+                      labelId="category-select-label"
+                      multiple
+                      value={newCommunityData.categories}
+                      onChange={(e) => setNewCommunityData(p => ({ ...p, categories: e.target.value }))}
+                      input={<OutlinedInput id="select-multiple-chip" label="Categories" />}
+                      renderValue={(selected) => (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {selected.map((value) => (
+                            <Chip
+                              key={value}
+                              label={value}
+                              onDelete={handleDeleteCategory(value)}
+                              onClick={(event) => event.stopPropagation()} // Prevent select menu from opening on chip click
+                            />
+                          ))}
+                        </Box>
+                      )}
+                      MenuProps={MenuProps}
+                    >
+                      {AVAILABLE_INTERESTS.map((interest) => (
+                        <MenuItem key={interest} value={interest}>
+                          {interest}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <Button
+                    variant="contained"
+                    size="large"
+                    color="primary"
+                    startIcon={creatingCommunity ? <CircularProgress size={20} color="inherit" /> : <AddCircleIcon />}
+                    onClick={handleCreateCommunity}
+                    disabled={creatingCommunity}
+                    sx={{ py: 1.5, fontWeight: 700 }}
+                  >
+                    {creatingCommunity ? 'Creating...' : 'Create Community'}
+                  </Button>
+                </Stack>
               </Paper>
             </Box>
           )}
+
+
         </Container>
       </Container>
 
-      {/* Notification Drawer */}
-      <Drawer anchor="right" open={notificationDrawer} onClose={() => setNotificationDrawer(false)} PaperProps={{ sx: { width: 384 } }}>
-        <Box sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="h6">Notifications</Typography>
-            <IconButton onClick={() => setNotificationDrawer(false)}><CloseIcon /></IconButton>
-          </Box>
+      <Dialog
+        open={inviteMemberDialog}
+        onClose={() => setInviteMemberDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Invite Member to {communityToInvite?.name}
+          <IconButton
+            onClick={() => setInviteMemberDialog(false)}
+            sx={{
+              position: 'absolute',
+              right: 8,
+              top: 8,
+              color: (theme) => theme.palette.grey[500],
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body1" gutterBottom>
+            Enter the email address of the user you want to invite.
+          </Typography>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Email Address"
+            type="email"
+            fullWidth
+            variant="outlined"
+            value={inviteEmail}
+            onChange={(e) => setInviteEmail(e.target.value)}
+            sx={{ mt: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setInviteMemberDialog(false)} disabled={sendingInvite}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSendInvite}
+            color="primary"
+            variant="contained"
+            disabled={sendingInvite || !inviteEmail}
+            startIcon={sendingInvite && <CircularProgress size={20} color="inherit" />}
+          >
+            {sendingInvite ? 'Sending...' : 'Send Invitation'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+
+
+
+      {/* Notification Drawer (Beautified) */}
+      <Drawer
+        anchor="right"
+        open={notificationDrawer}
+        onClose={() => setNotificationDrawer(false)}
+        PaperProps={{ sx: { width: { xs: '100%', sm: 450 }, bgcolor: '#f8fafc' } }} // Lighter background
+      >
+        <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+            <Typography variant="h5" fontWeight={700}>
+              Notifications 
+              <Badge badgeContent={unreadCount} color="error" sx={{ ml: 1 }}>
+                <NotificationsIcon />
+              </Badge>
+            </Typography>
+            <IconButton onClick={() => setNotificationDrawer(false)}>
+              <CloseIcon />
+            </IconButton>
+          </Stack>
+          
           <Divider sx={{ mb: 2 }} />
-          <List disablePadding>
+          
+          {unreadCount > 0 && (
+            <Button 
+              fullWidth 
+              variant="text" 
+              color="primary"
+              onClick={handleMarkAllAsRead}
+              startIcon={<CheckIcon />}
+              sx={{ mb: 2 }}
+            >
+              Mark all {unreadCount} as read
+            </Button>
+          )}
+
+          <List sx={{ flexGrow: 1, overflowY: 'auto', p: 0 }}>
             {notifications.length === 0 ? (
-              <Typography align="center" color="text.secondary" sx={{ py: 4 }}>No notifications</Typography>
+              <Box sx={{ textAlign: 'center', mt: 4, py: 4, bgcolor: 'white', borderRadius: 2 }}>
+                <Lightbulb color="action" sx={{ fontSize: 40, mb: 1 }} />
+                <Typography variant="body1" color="text.secondary">
+                  You are all caught up!
+                </Typography>
+              </Box>
             ) : (
-              notifications.map((notif) => (
-                <ListItem key={notif.id} alignItems="flex-start" sx={{ p: 0, mb: 2 }}>
-                  <ListItemAvatar>
-                    <Avatar sx={{ bgcolor: '#1e40af', width: 40, height: 40 }}>
-                      {notif.from?.charAt(0) || 'N'}
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={
-                      <Typography variant="body2" color="text.primary">
-                        {notif.message || `${notif.from} invited you to join ${notif.community}`}
-                      </Typography>
-                    }
-                    secondary={
-                      <>
-                        <Typography variant="caption" color="text.secondary">{notif.time}</Typography>
-                        {!notif.read && notif.type === 'invite' && (
-                          <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                            <Button
-                              size="small"
-                              variant="contained"
-                              startIcon={<CheckIcon />}
-                              onClick={() => handleAcceptInvite(notif.id, notif.community)}
-                              sx={{ textTransform: 'none' }}
+              notifications.map((notif) => {
+                const isInvite = notif.type === 'COMMUNITY_INVITE';
+                const IconComponent = isInvite ? Share : GroupIcon; // Use Share for invite
+                const bgColor = notif.read ? 'white' : '#e0f2fe'; // Light blue for unread
+
+                return (
+                  <Paper 
+                    key={notif._id} 
+                    elevation={0}
+                    sx={{ 
+                      mb: 1.5, 
+                      p: 2, 
+                      bgcolor: bgColor, 
+                      borderRadius: 2,
+                      borderLeft: notif.read ? 'none' : '4px solid #0288d1', // Highlight unread
+                      cursor: notif.read ? 'default' : 'pointer',
+                      '&:hover': { 
+                          bgcolor: notif.read ? '#f5f5f5' : '#b3e5fc' 
+                      }
+                    }}
+                    onClick={() => !notif.read && handleMarkAsRead(notif._id)}
+                  >
+                    <ListItem disablePadding sx={{ alignItems: 'flex-start' }}>
+                      <ListItemAvatar sx={{ minWidth: 40, mt: 0 }}>
+                        <Avatar sx={{ bgcolor: isInvite ? 'secondary.main' : 'primary.main', width: 32, height: 32 }}>
+                          <IconComponent fontSize="small" />
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText 
+                        primary={
+                          <Stack direction="row" justifyContent="space-between" alignItems="center">
+                            <Typography variant="subtitle2" fontWeight={700}>
+                              {notif.title}
+                            </Typography>
+                            {!notif.read && (
+                                <Badge variant="dot" color="error" />
+                            )}
+                          </Stack>
+                        } 
+                        secondary={
+                          <React.Fragment>
+                            <Typography
+                                component="span"
+                                variant="body2"
+                                color="text.primary"
+                                sx={{ display: 'block', mt: 0.5 }}
                             >
-                              Accept
-                            </Button>
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              color="error"
-                              startIcon={<CloseIcon />}
-                              onClick={() => handleDeclineInvite(notif.id)}
-                              sx={{ textTransform: 'none' }}
-                            >
-                              Decline
-                            </Button>
-                          </Box>
-                        )}
-                      </>
-                    }
-                  />
-                </ListItem>
-              ))
+                                {notif.message}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                                {new Date(notif.createdAt).toLocaleString()}
+                            </Typography>
+                          </React.Fragment>
+                        } 
+                      />
+                    </ListItem>
+
+                    {/* Invitation Action Buttons */}
+                    {isInvite && !notif.read && (
+                      <Stack direction="row" spacing={1} justifyContent="flex-end" mt={1.5} pr={1}>
+                        <Button 
+                          size="small" 
+                          variant="contained" 
+                          color="success"
+                          startIcon={<CheckIcon />}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent ListItem click
+                            handleAcceptInvite(notif._id, notif.data.communityId);
+                          }}
+                        >
+                          Accept
+                        </Button>
+                        <Button 
+                          size="small" 
+                          variant="outlined" 
+                          color="error"
+                          startIcon={<CloseIcon />}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent ListItem click
+                            handleDeclineInvite(notif._id);
+                          }}
+                        >
+                          Decline
+                        </Button>
+                      </Stack>
+                    )}
+                  </Paper>
+                );
+              })
             )}
           </List>
         </Box>
@@ -946,16 +1164,16 @@ const MenuProps = {
           </Box>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <Box>
-              <Typography variant="subtitle1" sx={{fontWeight:"600" , display:"flex"}} gutterBottom>
-                Bio  <Lightbulb sx={{color:"yellow" ,  pl:1}}/> 
-                </Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: "600", display: "flex" }} gutterBottom>
+                Bio  <Lightbulb sx={{ color: "yellow", pl: 1 }} />
+              </Typography>
               <Typography variant="body2" color="text.secondary">
                 {profileData?.bio || 'No bio yet'}
               </Typography>
             </Box>
             <Box>
-              <Typography variant="subtitle1" sx={{fontWeight:"600" , display:"flex"}} gutterBottom>
-                Interests <Interests sx={{color:"red" ,  pl:1}}/></Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: "600", display: "flex" }} gutterBottom>
+                Interests <Interests sx={{ color: "red", pl: 1 }} /></Typography>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 {profileData?.interests?.length > 0 ? (
                   profileData.interests.map((interest, idx) => (
@@ -967,8 +1185,8 @@ const MenuProps = {
               </Box>
             </Box>
             <Box>
-              <Typography variant="subtitle1"  sx={{fontWeight:"600" , display:"flex"}} gutterBottom>
-                Statistics <QueryStats sx={{color:"blue" , pl:1}}/> </Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: "600", display: "flex" }} gutterBottom>
+                Statistics <QueryStats sx={{ color: "blue", pl: 1 }} /> </Typography>
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                 <Typography variant="body2" color="text.secondary">Communities</Typography>
                 <Typography variant="body2" fontWeight={700}>{myCommunities.length}</Typography>
@@ -988,9 +1206,24 @@ const MenuProps = {
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                 <Typography variant="body2" color="text.secondary">Last Login</Typography>
                 <Typography variant="body2" fontWeight={700}>
-                {profileData?.lastLogin ? new Date(profileData.lastLogin).toLocaleTimeString() : 'N/A'}
+                  {profileData?.lastLogin ? new Date(profileData.lastLogin).toLocaleTimeString() : 'N/A'}
                 </Typography>
               </Box>
+              {/* Action: Logout */}
+
+              <Button
+                type="submit"
+                fullWidth
+                onClick={() => {
+                  localStorage.removeItem('token');
+                  window.location.href = '/login';
+                }}
+                variant="contained"
+                sx={{ mt: 2, mb: 2, py: 1.5, borderRadius: 2, fontWeight: 700 , bgcolor: 'red' }}
+                startIcon={<Logout />}
+              >
+                Logout
+              </Button>
             </Box>
           </Box>
         </Box>
@@ -1125,12 +1358,17 @@ const MenuProps = {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
       >
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>
+
     </Box>
   );
 }

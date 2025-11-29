@@ -88,6 +88,20 @@ export const markNotificationAsRead = async (notificationId) => {
   return response.data;
 };
 
+
+/**
+ * Mark all notifications as read
+ */
+export const markAllNotificationsAsRead = async () => {
+  const response = await api.put(`/notifications/mark-all-read`); // Assuming you map this endpoint in your backend router
+  return response.data;
+};
+
+
+export const clearAllNotifications=async()=>{
+  const response = await api.delete(`/notifications/`);
+  return response.data;
+}
 /**
  * Delete notification
  */
@@ -169,6 +183,16 @@ export const getCommunityDiscussions = async (idOrSlug, page = 1, limit = 10) =>
 };
 
 /**
+ * Invite a user to a community by email
+ */
+export const inviteMember = async (communityId, invitedUserEmail) => {
+  const response = await api.post(`/communities/${communityId}/invite`, { 
+    email: invitedUserEmail 
+  });
+  return response.data;
+};
+
+/**
  * Join a community
  */
 export const joinCommunity = async (idOrSlug) => {
@@ -176,6 +200,36 @@ export const joinCommunity = async (idOrSlug) => {
   return response.data;
 };
 
+// ==================== POST/DISCUSSION APIs ====================
+
+/**
+ * Get all posts for a community
+ */
+export const getCommunityPostsAPI = async (communityId, page = 1, limit = 20) => {
+  const response = await api.get(`/posts/community/${communityId}?page=${page}&limit=${limit}`);
+  return response.data;
+};
+
+/**
+ * Create a new post (handles file uploads)
+ * @param {FormData} formData - Must be FormData containing 'content', 'communityId', and optional 'file'
+ */
+export const createPostAPI = async (formData) => {
+  const response = await api.post('/posts', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+/**
+ * Toggle upvote/like on a post
+ */
+export const togglePostVoteAPI = async (postId) => {
+  const response = await api.put(`/posts/${postId}/vote`);
+  return response.data;
+};
 /**
  * Search user's communities
  */
