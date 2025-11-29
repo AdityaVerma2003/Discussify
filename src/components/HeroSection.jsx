@@ -64,7 +64,7 @@ const HeroSection = () => {
                 textAlign: 'center', 
                 py: 10, 
                 mb: 8, 
-                mt: 12
+                pt:25
             }}
         >
             {/* The main dynamic headline */}

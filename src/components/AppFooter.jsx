@@ -3,7 +3,7 @@ import { Box, Container, Grid, Typography , Avatar  , Divider } from "@mui/mater
 import { grey } from "@mui/material/colors";
 
 const AppFooter = () => (
-    <Box sx={{ bgcolor: 'background.paper', borderTop: `1px solid ${grey[200]}`, py: 6 }}>
+    <Box sx={{ bgcolor: 'background.paper', borderTop: `1px solid ${grey[200]}`, py: 6 , mt:4 }}>
         <Container maxWidth="lg">
             <Grid container spacing={8}>
                 {/* Logo and Tagline */}

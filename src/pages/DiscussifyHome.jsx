@@ -11,197 +11,193 @@ import {
 import { createTheme } from '@mui/material/styles';
 import { blue, grey, green, red, deepOrange } from '@mui/material/colors';
 
-// ASSUMED IMPORTS (ensure these are available)
-import CommunityCard from '../components/CommunityCard' // From previous response
-import FeatureCard from '../components/FeatureCard'; // New component above
-import Navbar from '../components/Navbar'; // Updated Navbar component
+import CommunityCard from '../components/CommunityCard'
+import FeatureCard from '../components/FeatureCard';
+import Navbar from '../components/Navbar';
 import HeroSection from '../components/HeroSection';
 import HowItWorksSection from '../components/HowItWorksSection';
 import AppFooter from '../components/AppFooter';
 import { useNavigate } from 'react-router-dom';
 
-// --- Custom Theme Definition (theme.js content) ---
+// Modern Premium UI Theme
 const theme = createTheme({
   palette: {
-    primary: {
-      main: blue[700], // #007BFF equivalent
-    },
-    secondary: {
-      main: grey[600],
-    },
+    primary: { main: blue[700] },
+    secondary: { main: grey[700] },
     background: {
-      default: '#ffffffff', // Light grey background
-      paper: '#FFFFFF',
+      default: '#f7f9fc',
+      paper: '#ffffff',
     },
     success: { main: green[600] },
     error: { main: red[600] },
-    info: { main: deepOrange[500] } // Added for feature colors
+    info: { main: deepOrange[500] }
   },
   typography: {
-    fontFamily: ['Roboto', '"Helvetica Neue"', 'Arial', 'sans-serif'].join(','),
-    h2: { fontWeight: 700, fontSize: '3rem' },
-    h4: { fontWeight: 600 },
+    fontFamily: "'Inter', 'Roboto', sans-serif",
+    h2: { fontWeight: 800 },
+    h3: { fontWeight: 700 },
+    h4: { fontWeight: 700 },
   },
   components: {
     MuiButton: {
       styleOverrides: {
-        root: { textTransform: 'none', borderRadius: 8 },
-      },
-    },
-    MuiAppBar: {
-      styleOverrides: {
         root: {
-          boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+          textTransform: 'none',
+          borderRadius: 12,
+          paddingLeft: 20,
+          paddingRight: 20,
         },
       },
     },
-    MuiCard: { defaultProps: { elevation: 1 } }
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          borderRadius: 18,
+          transition: "0.3s",
+        },
+      },
+    },
   }
 });
-// ---------------------------------------------------
-
 
 // Mock Data
 const mockCommunities = [
   { id: 1, name: 'Technology', description: 'Discuss the latest developments in technology.', members: 4520, isPrivate: false, tags: ['React', 'Node'], icon: <Lightbulb /> },
-  { id: 2, name: 'Health', description: 'Share tips and advice on health and wellness.', members: 1280, isPrivate: false, tags: ['Wellness', 'Fitness'], icon: <Lightbulb /> },
-  { id: 3, name: 'Travel', description: 'Exchange travel experiences and recommendations.', members: 8900, isPrivate: false, tags: ['Vacation', 'Guides'], icon: <Lightbulb /> },
-  { id: 4, name: 'Programming', description: 'Talk about coding, software development.', members: 600, isPrivate: false, tags: ['Strategy', 'Code'], icon: <Lightbulb /> },
+  { id: 2, name: 'Health', description: 'Tips and advice on wellness.', members: 1280, isPrivate: false, tags: ['Fitness'], icon: <Lightbulb /> },
+  { id: 3, name: 'Travel', description: 'Travel experiences & recommendations.', members: 8900, isPrivate: false, tags: ['Guides'], icon: <Lightbulb /> },
+  { id: 4, name: 'Programming', description: 'Talk about coding & software development.', members: 600, isPrivate: false, tags: ['Strategy', 'Code'], icon: <Lightbulb /> },
 ];
 
 const mockFeatures = [
-  { icon: <GroupAdd />, title: 'Create Communities', description: 'Build private or public spaces around your specific passions and interests.', color: 'primary' },
-  { icon: <ChatBubble />, title: 'Engage in Discussions', description: 'Participate in meaningful, structured conversations and debates.', color: 'success' },
-  { icon: <Share />, title: 'Share Resources', description: 'Easily share articles, videos, and professional documents with members.', color: 'info' },
-  { icon: <Gavel />, title: 'Admin Tools', description: 'Manage users and content within your community with powerful moderation tools.', color: 'secondary' },
+  { icon: <GroupAdd />, title: 'Create Communities', description: 'Build private or public spaces.', color: 'primary' },
+  { icon: <ChatBubble />, title: 'Engage in Discussions', description: 'Join deep, meaningful conversations.', color: 'success' },
+  { icon: <Share />, title: 'Share Resources', description: 'Share articles, videos & documents.', color: 'info' },
+  { icon: <Gavel />, title: 'Admin Tools', description: 'Manage users & moderate content.', color: 'secondary' },
 ];
-
-
-
 
 const DiscussifyHome = () => {
   const navigate = useNavigate();
+
   return (
     <ThemeProvider theme={theme}>
-
-      {/* 2. Main Content Sections */}
-      <Box sx={{ bgcolor: 'background.default', pb: 8 }}>
+      <Box sx={{ bgcolor: 'background.default' , mt:0}}>
         <Container maxWidth="lg">
-          {/* A. Hero Section */}
-          {/* A. Hero Section with Updated Headline and Styling */}
+
+          {/* HERO */}
           <HeroSection />
 
-
-
-          {/* C. Popular Communities Section */}
-          <Box sx={{ py: 6 }}>
-            {/* Heading: Big and Centered */}
-            <Typography
-              variant="h3" // Increased font size to h3 for prominence
-              align="center"
-              sx={{ mb: 8, fontWeight: 700 }}
-            >
+          {/* POPULAR COMMUNITIES */}
+          <Box sx={{ py: 8 }}>
+            <Typography variant="h3" align="center" sx={{ mb: 6 }}>
               Popular Communities
             </Typography>
 
-            {/* Horizontal Scroll Container */}
             <Box
               sx={{
                 display: 'flex',
-                overflowX: 'scroll', // Key for horizontal scrolling
-                // Hide the default scrollbar for a cleaner look (optional, but professional)
+                overflowX: 'auto',
+                gap: 1,
+                pb: 1,
+                px: 1,
                 '&::-webkit-scrollbar': { display: 'none' },
-                msOverflowStyle: 'none', // IE and Edge
-                scrollbarWidth: 'none', // Firefox
-                pb: 2, // Padding at the bottom for scroll space
               }}
             >
               {mockCommunities.map((community) => (
-                // Use Box instead of Grid Item for flex layout
                 <Box
                   key={community.id}
                   sx={{
-                    // Fixed width for each card, ensuring several fit on screen
-                    minWidth: { xs: 280, sm: 300, md: 400 },
-                    mr: 3, // Spacing between cards
-                    flexShrink: 0, // Prevents cards from shrinking when scrolled
+                    minWidth: { xs: 260, sm: 300, md: 360 },
+                    flexShrink: 0,
                   }}
                 >
-                  <CommunityCard
-                    name={community.name}
-                    description={community.description}
-                    members={community.members}
-                    isPrivate={community.isPrivate}
-                    tags={community.tags}
-                    icon={community.icon} // Pass the SVG icon
-                  />
+                  <CommunityCard {...community} />
                 </Box>
               ))}
             </Box>
           </Box>
 
-{/* ABOUT US SECTION */}
- <Paper
+          {/* ABOUT US */}
+          <Paper
+            elevation={4}
             sx={{
-              p: 6,
+              p: { xs: 4, md: 6 },
               textAlign: 'center',
-              bgcolor: 'primary.main',
+              background: 'linear-gradient(135deg, #1565c0 0%, #1e88e5 100%)',
               color: 'white',
-              my: 4
+              my: 6,
+              borderRadius: 4
             }}
           >
-            <Typography variant="h4" component="p" sx={{ mb: 3 }}>
-            About Us
+            <Typography variant="h4" sx={{ mb: 2 }}>
+              About Us
             </Typography>
-            <Typography variant="subtitle1" sx={{ mb: 4 , fontSize: { xs: '1rem', md: '1.2rem' } , lineHeight: 1.6 , maxWidth: 1000 , mx: 'auto' }}>
-              Discussify is a modern community-based social platform designed to bring
-              people together through meaningful conversations. Whether you’re exploring
-              tech, health, lifestyle, or career topics – Discussify helps you learn,
-              share, and connect with like-minded individuals.
+            <Typography
+              variant="subtitle1"
+              sx={{
+                maxWidth: 900,
+                mx: 'auto',
+                fontSize: '1.15rem',
+                lineHeight: 1.7,
+                opacity: 0.95,
+              }}
+            >
+              Discussify is a modern social platform designed to bring people together
+              through meaningful discussions. Whether you're exploring tech, health,
+              lifestyle, or career topics — Discussify helps you learn and connect with
+              like-minded individuals.
             </Typography>
           </Paper>
 
-          {/* B. Features Section */}
-          <Box sx={{ py: 6 }}>
-            <Typography variant="h4" align="center" sx={{ mb: 5, fontWeight: 700 }}>
+          {/* FEATURES */}
+          <Box sx={{ py: 8 }}>
+            <Typography variant="h3" align="center" sx={{ mb: 6 }}>
               Platform Key Features
             </Typography>
-            <Grid container sx={{ alignContent: "center", display: "flex", justifyContent: "center" }} spacing={3}>
+
+            <Grid container spacing={4} alignItems="stretch" sx={{display:"flex", justifyContent:"center" }}>
               {mockFeatures.map((feature, index) => (
-                <Grid item xs={12} sm={6} md={6} key={index}>
+                <Grid item xs={12} md={4} key={index} sx={{display:"flex", justifyContent:"center" }} >
                   <FeatureCard {...feature} />
                 </Grid>
               ))}
             </Grid>
           </Box>
 
-          {/* D. How It Works Section */}
+          {/* HOW IT WORKS */}
           <HowItWorksSection />
 
-         
-
-
-          {/* F. Final Call to Action (CTA) */}
+          {/* CTA */}
           <Paper
+            elevation={5}
             sx={{
-              p: 6,
+              p: { xs: 4, md: 6 },
               textAlign: 'center',
-              bgcolor: 'primary.main',
+              background: 'linear-gradient(135deg, #0d47a1 0%, #1976d2 100%)',
               color: 'white',
-              my: 4
+              mt: 8,
+              borderRadius: 4
             }}
           >
-            <Typography variant="h4" component="p" sx={{ mb: 2 }}>
+            <Typography variant="h4" sx={{ mb: 2 }}>
               Ready to Join the Conversation?
             </Typography>
-            <Typography variant="subtitle1" sx={{ mb: 4 }}>
-              Create your account and start connecting with like-minded professionals today.
+            <Typography variant="subtitle1" sx={{ mb: 4, opacity: 0.95 }}>
+              Create your account and start connecting with professionals today.
             </Typography>
+
             <Button
               variant="contained"
               size="large"
               onClick={() => navigate('/register')}
-              sx={{ bgcolor: 'white', color: 'primary.main', fontWeight: 600, '&:hover': { bgcolor: grey[100] } }}
+              sx={{
+                bgcolor: 'white',
+                color: 'primary.main',
+                fontWeight: 700,
+                px: 4,
+                py: 1.2,
+                fontSize: '1.1rem',
+                '&:hover': { bgcolor: grey[200] }
+              }}
             >
               Create Free Account
             </Button>
@@ -209,7 +205,6 @@ const DiscussifyHome = () => {
 
         </Container>
       </Box>
-
     </ThemeProvider>
   );
 };

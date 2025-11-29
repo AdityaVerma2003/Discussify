@@ -13,7 +13,7 @@ import {
 } from '@mui/icons-material';
 import { togglePostVoteAPI } from '../services/api.js'; // Import API function
 
-const PostItem = ({ post, community, currentUserId, onPostUpdate }) => {
+const PostItem = ({ post, community, currentUserId, onPostUpdate , showSnackbar }) => {
     // Check if the current user has liked the post
     const hasUpvoted = post.upvotes?.includes(currentUserId);
     const voteCount = post.voteCount || 0;
@@ -28,6 +28,7 @@ const PostItem = ({ post, community, currentUserId, onPostUpdate }) => {
         } catch (error) {
             console.error('Failed to toggle vote:', error);
             // Show error snackbar
+            showSnackbar(error.response?.data?.message || 'Failed to toggle vote.', 'error');
         }
     };
 

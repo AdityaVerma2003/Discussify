@@ -110,7 +110,8 @@ const CommunityPage = ({ community, userId, goBack, userAvatar, showSnackbar }) 
         }
 
         // The backend API handles saving and emitting the socket event.
-        await createPostAPI(formData); 
+        const response = await createPostAPI(formData);
+        setPosts(prev => [...prev, response.post]);
         
         // Reset inputs
         setNewPostContent('');
@@ -177,7 +178,8 @@ const CommunityPage = ({ community, userId, goBack, userAvatar, showSnackbar }) 
                 post={post} 
                 community={community} 
                 currentUserId={userId} 
-                onPostUpdate={handlePostUpdate} // Pass handler for local updates
+                onPostUpdate={handlePostUpdate} 
+                showSnackbar={showSnackbar}
             />
           ))
         )}

@@ -15,8 +15,8 @@ const FeatureCard = ({ icon, title, description, color }) => {
         borderColor: "grey.300",
         boxShadow: 2,
         transition: "0.3s ease",
-        height: { xs: "auto", sm: 230, md: 200 },
-        width: { xs: "100%", sm: "100%", md: 500 },
+        height: { xs: 150, sm: 230, md: 200 },
+        width: { xs: 450 , sm: "100%", md: 500 },
 
         "&:hover": {
           boxShadow: 8,
