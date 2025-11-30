@@ -217,7 +217,7 @@ const EmailVerificationPage = ({ onNavigate, registeredEmail, capturedOTP }) => 
             </Box>
             
             {/* OTP Display Box - Only shows the OTP received from the registration response */}
-            {capturedOTP && (
+            {/* {capturedOTP && (
                 <Box 
                     sx={{ 
                         p: 2, 
@@ -245,7 +245,7 @@ const EmailVerificationPage = ({ onNavigate, registeredEmail, capturedOTP }) => 
                         {copied ? 'Copied!' : 'Copy OTP'}
                     </Button>
                 </Box>
-            )}
+            )} */}
             {/* End OTP Display Box */}
 
 
