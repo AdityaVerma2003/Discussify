@@ -1,5 +1,5 @@
 // src/pages/DiscussifyHome.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import {
   AppBar, Toolbar, Typography, Button, Container, Box, Grid, TextField, InputAdornment,
   ThemeProvider, Paper, Divider, Avatar
@@ -77,6 +77,13 @@ const mockFeatures = [
 
 const DiscussifyHome = () => {
   const navigate = useNavigate();
+  const [communities , setCommunities] = useState([]);
+  // const getPopularCommunities = async()=>{
+  //   try {
+  //       const resp = await
+  //   } catch (error) {
+      
+  //   }
 
   return (
     <ThemeProvider theme={theme}>
