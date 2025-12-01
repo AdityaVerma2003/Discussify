@@ -102,7 +102,6 @@ const CommunityPage = ({ community, userId, goBack, userAvatar, showSnackbar }) 
         // Append core data
         formData.append('content', newPostContent.trim());
         formData.append('communityId', communityId);
-        formData.append('title', newPostContent.trim().substring(0, 50)); // Simple title from content
 
         // Append file if exists. The backend expects 'file' as the field name.
         if (attachedFile) {

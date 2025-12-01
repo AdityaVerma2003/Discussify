@@ -80,7 +80,7 @@ const PostItem = ({ post, community, currentUserId, onPostUpdate , showSnackbar 
                 <Divider sx={{ my: 1 }} />
 
                 {/* Content */}
-                {post.title && <Typography variant="h6" sx={{ mb: 1 }}>{post.title}</Typography>}
+               
                 <Typography variant="body1" sx={{ mt: 1, mb: 2, whiteSpace: 'pre-wrap' }}>{post.content}</Typography>
 
                 {/* Render Media */}
