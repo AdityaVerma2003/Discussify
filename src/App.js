@@ -9,10 +9,11 @@ import UserDashboard from './pages/UserDashboard';
 import RegistrationComponent from './pages/RegistrationPage';
 import Navbar from './components/Navbar';
 import AppFooter from './components/AppFooter';
+import AdminPanel from "./pages/AdminPanel"
 
 function AppContent() {
   const location = useLocation();
-  const hideNavAndFooter = location.pathname === '/user';
+  const hideNavAndFooter = location.pathname === '/user' || location.pathname === '/admin' ;
 
   return (
     <>
@@ -22,6 +23,7 @@ function AppContent() {
         <Route path="/register" element={<RegistrationComponent />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/user" element={<UserDashboard />} />
+        <Route path="/admin" element={ <AdminPanel />}/>
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
       {!hideNavAndFooter && <AppFooter />}

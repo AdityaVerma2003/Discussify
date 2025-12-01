@@ -1,5 +1,5 @@
 // src/pages/DiscussifyHome.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   AppBar, Toolbar, Typography, Button, Container, Box, Grid, TextField, InputAdornment,
   ThemeProvider, Paper, Divider, Avatar
@@ -10,6 +10,7 @@ import {
 } from '@mui/icons-material';
 import { createTheme } from '@mui/material/styles';
 import { blue, grey, green, red, deepOrange } from '@mui/material/colors';
+import axios from "axios"
 
 import CommunityCard from '../components/CommunityCard'
 import FeatureCard from '../components/FeatureCard';
@@ -60,13 +61,6 @@ const theme = createTheme({
   }
 });
 
-// Mock Data
-const mockCommunities = [
-  { id: 1, name: 'Technology', description: 'Discuss the latest developments in technology.', members: 4520, isPrivate: false, tags: ['React', 'Node'], icon: <Lightbulb /> },
-  { id: 2, name: 'Health', description: 'Tips and advice on wellness.', members: 1280, isPrivate: false, tags: ['Fitness'], icon: <Lightbulb /> },
-  { id: 3, name: 'Travel', description: 'Travel experiences & recommendations.', members: 8900, isPrivate: false, tags: ['Guides'], icon: <Lightbulb /> },
-  { id: 4, name: 'Programming', description: 'Talk about coding & software development.', members: 600, isPrivate: false, tags: ['Strategy', 'Code'], icon: <Lightbulb /> },
-];
 
 const mockFeatures = [
   { icon: <GroupAdd />, title: 'Create Communities', description: 'Build private or public spaces.', color: 'primary' },
@@ -78,12 +72,19 @@ const mockFeatures = [
 const DiscussifyHome = () => {
   const navigate = useNavigate();
   const [communities , setCommunities] = useState([]);
-  // const getPopularCommunities = async()=>{
-  //   try {
-  //       const resp = await
-  //   } catch (error) {
-      
-  //   }
+  const getPopularCommunities = async()=>{
+    try {
+        const resp = await axios.get("http://localhost:3001/api/v1/communities/popular")
+        console.log("resp",resp.data.data); 
+        setCommunities(resp.data.data);
+    } catch (error) {
+      console.log("error while fetching popular communities" , error)
+    }
+  }
+
+  useEffect(()=>{
+    getPopularCommunities();
+  },[])
 
   return (
     <ThemeProvider theme={theme}>
@@ -109,9 +110,9 @@ const DiscussifyHome = () => {
                 '&::-webkit-scrollbar': { display: 'none' },
               }}
             >
-              {mockCommunities.map((community) => (
+              {communities.map((community) => (
                 <Box
-                  key={community.id}
+                  key={community._id}
                   sx={{
                     minWidth: { xs: 260, sm: 300, md: 360 },
                     flexShrink: 0,

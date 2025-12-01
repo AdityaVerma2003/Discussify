@@ -29,6 +29,7 @@ import {
   Visibility,
   Share,
   Logout,
+  ExitToApp,
 } from '@mui/icons-material';
 
 // Import API functions
@@ -46,6 +47,7 @@ import {
   markAllNotificationsAsRead,
   inviteMember as inviteMemberAPI,
   clearAllNotifications,
+  leaveCommunity
 } from '../services/api.js';
 
 import CommunityPage from '../pages/CommunityPage.jsx';
@@ -496,7 +498,7 @@ export default function UserDashboard() {
   ];
 
   // Utility functions for Create Community Tab
-  const handleDeleteCategory = (chipToDelete) => (event)=>{
+  const handleDeleteCategory = (chipToDelete) => (event) => {
     event.stopPropagation();
     setNewCommunityData((prev) => ({
       ...prev,
@@ -561,6 +563,39 @@ export default function UserDashboard() {
     return <CommunityPage community={selectedCommunity} userId={profileData?._id || profileData?.id} goBack={goBackToDashboard} showSnackbar={showSnackbar} userAvatar={profileData?.profileImage} />;
   }
 
+
+  const handleLeaveCommunity = async (communityId) => {
+    // You should add a confirmation step here (e.g., alert or modal)
+    if (!window.confirm("Are you sure you want to leave this community?")) {
+        return; // Stop if the user cancels
+    }
+    
+    try {
+        // Call the API function
+        const data = await leaveCommunity(communityId);
+        
+        // Success feedback
+        setSnackbar({
+            open: true,
+            message: data.message,
+            severity: 'success',
+        });
+        console.log("Left community successfully:", data);
+      
+
+    } catch (error) {
+        // Error feedback
+        const errorMessage = error.message || 'Failed to leave community.';
+        setSnackbar({
+            open: true,
+            message: errorMessage,
+            severity: 'error',
+        });
+        console.error('Error leaving community:', error);
+    }
+};
+
+
   // Dashboard view
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: theme.palette.grey[50] }}>
@@ -593,10 +628,10 @@ export default function UserDashboard() {
       <Container maxWidth="xl" sx={{ py: 6 }}>
         <Container maxWidth="lg" sx={{ px: { xs: 2, md: 0 } }}>
           {/* -------------------- 2. Welcome/Profile Card (Elevated & Elegant) -------------------- */}
-          <Paper elevation={8} sx={{ 
-              px: 4, py: 4, mb: 5, borderRadius: 4, 
-              background: 'linear-gradient(135deg, #ffffff 0%, #f0f4f8 100%)',
-              border: `1px solid ${theme.palette.grey[200]}`
+          <Paper elevation={8} sx={{
+            px: 4, py: 4, mb: 5, borderRadius: 4,
+            background: 'linear-gradient(135deg, #ffffff 0%, #f0f4f8 100%)',
+            border: `1px solid ${theme.palette.grey[200]}`
           }}>
             <Box sx={{ display: "flex", alignItems: "center" }}>
               <Avatar
@@ -620,18 +655,18 @@ export default function UserDashboard() {
                   Ready to connect? Manage your communities and discover new discussions.
                 </Typography>
                 <Stack direction="row" spacing={1} mt={1}>
-                  <Chip 
-                    icon={<Interests />} 
-                    label={profileData?.interests?.length ? `${profileData.interests.length} Interests` : 'No Interests Set'} 
-                    variant="outlined" 
-                    size="small" 
+                  <Chip
+                    icon={<Interests />}
+                    label={profileData?.interests?.length ? `${profileData.interests.length} Interests` : 'No Interests Set'}
+                    variant="outlined"
+                    size="small"
                     color="primary"
                   />
-                  <Chip 
-                    icon={<EditIcon />} 
-                    label="Edit Profile" 
-                    onClick={() => setSettingsDrawer(true)} 
-                    clickable 
+                  <Chip
+                    icon={<EditIcon />}
+                    label="Edit Profile"
+                    onClick={() => setSettingsDrawer(true)}
+                    clickable
                     size="small"
                   />
                 </Stack>
@@ -642,10 +677,10 @@ export default function UserDashboard() {
 
           {/* -------------------- 3. Tabs (Modern Look) -------------------- */}
           <Box sx={{ borderBottom: 1, borderColor: theme.palette.divider, mb: 4 }}>
-            <Tabs 
-              value={currentTab} 
-              onChange={(e, v) => setCurrentTab(v)} 
-              variant="scrollable" 
+            <Tabs
+              value={currentTab}
+              onChange={(e, v) => setCurrentTab(v)}
+              variant="scrollable"
               scrollButtons="auto"
               TabIndicatorProps={{ style: { background: theme.palette.primary.main, height: 3 } }}
             >
@@ -657,18 +692,18 @@ export default function UserDashboard() {
                     label={t.name}
                     icon={<Icon fontSize="small" />}
                     iconPosition="start"
-                    sx={{ 
-                        textTransform: 'none', 
-                        py: 1.5, 
-                        px: 4, 
-                        fontWeight: 700,
-                        color: currentTab === i ? theme.palette.primary.main : theme.palette.text.secondary,
-                        '&.Mui-selected': { 
-                            color: theme.palette.primary.main,
-                            backgroundColor: theme.palette.primary.light + '10'
-                        },
-                        borderRadius: 2,
-                        mr: 1
+                    sx={{
+                      textTransform: 'none',
+                      py: 1.5,
+                      px: 4,
+                      fontWeight: 700,
+                      color: currentTab === i ? theme.palette.primary.main : theme.palette.text.secondary,
+                      '&.Mui-selected': {
+                        color: theme.palette.primary.main,
+                        backgroundColor: theme.palette.primary.light + '10'
+                      },
+                      borderRadius: 2,
+                      mr: 1
                     }}
                   />
                 );
@@ -717,12 +752,12 @@ export default function UserDashboard() {
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                               <Avatar
                                 src={community.coverImage ? community.coverImage : null}
-                                sx={{ 
-                                  bgcolor: theme.palette.primary.main, 
+                                sx={{
+                                  bgcolor: theme.palette.primary.main,
                                   background: community.coverImage ? 'none' : `linear-gradient(45deg, ${theme.palette.primary.light} 30%, ${theme.palette.primary.dark} 90%)`,
-                                  width: 64, 
-                                  height: 64, 
-                                  fontSize: 24, 
+                                  width: 64,
+                                  height: 64,
+                                  fontSize: 24,
                                   fontWeight: 700,
                                   border: `2px solid ${theme.palette.primary.light}`
                                 }}>
@@ -750,6 +785,18 @@ export default function UserDashboard() {
                               <Button fullWidth variant="contained" onClick={() => handleViewCommunity(community)} sx={{ fontWeight: 700 }}>
                                 <Visibility sx={{ mr: 1 }} />View Community
                               </Button>
+
+                              {/* --- LEAVE COMMUNITY BUTTON (NEW) --- */}
+                              <Button
+                                fullWidth
+                                variant="outlined"
+                                color="error"
+                                onClick={() => handleLeaveCommunity(community._id)} // Assume you have a handler
+                                sx={{ fontWeight: 600 }}
+                              >
+                                <ExitToApp sx={{ mr: 1 }} />Leave Community
+                              </Button>
+
                               {/* Only show invite button if the user is an admin or moderator */}
                               {true && ( // Removed role check for visual demo, but kept it structured
                                 <Button
@@ -773,7 +820,7 @@ export default function UserDashboard() {
             </Box>
           )}
           {/* ----------------------------------------------------------------- */}
-          
+
           {/* -------------------- 5. Tab 1: Popular Communities -------------------- */}
           {currentTab === 1 && (
             <Box>
@@ -801,7 +848,7 @@ export default function UserDashboard() {
                                   sx={{ bgcolor: theme.palette.error.main, width: 64, height: 64, fontSize: 24, fontWeight: 700 }}>
                                   {!community.coverImage && (community.name?.charAt(0) || 'U')}
                                 </Avatar>
-                                <Chip icon={<TrendingUpIcon fontSize="small" />} label="Trending" size="small" color="error" sx={{ fontWeight: 600 }} />
+                                <Chip icon={<TrendingUpIcon fontSize="small" />} label="Trending" size="small" sx={{ fontWeight: 600 }} />
                               </Box>
                               <Typography variant="h6" fontWeight={700} gutterBottom>{community.name}</Typography>
                               <Typography variant="body2" color="text.secondary" mb={1}>
@@ -857,17 +904,17 @@ export default function UserDashboard() {
                           <Card elevation={3} sx={{ borderRadius: 3, height: '100%', display: 'flex', flexDirection: 'column', transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-5px)', boxShadow: 6 } }}>
                             <CardContent sx={{ flexGrow: 1 }}>
                               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                                <Avatar 
-                                  sx={{ 
-                                    bgcolor: theme.palette.info.main, 
-                                    width: 64, 
-                                    height: 64, 
-                                    fontSize: 24, 
-                                    fontWeight: 700 
+                                <Avatar
+                                  sx={{
+                                    bgcolor: theme.palette.info.main,
+                                    width: 64,
+                                    height: 64,
+                                    fontSize: 24,
+                                    fontWeight: 700
                                   }}>
                                   {community.name.charAt(0)}
                                 </Avatar>
-                                <Chip icon={<CheckIcon fontSize="small" />} label="Best Match" size="small" color="success" sx={{ fontWeight: 600 }}/>
+                                <Chip icon={<CheckIcon fontSize="small" />} label="Best Match" size="small" color="success" sx={{ fontWeight: 600 }} />
                               </Box>
                               <Typography variant="h6" fontWeight={700} gutterBottom>{community.name}</Typography>
                               <Typography variant="body2" color="text.secondary" mb={1}>
@@ -938,7 +985,7 @@ export default function UserDashboard() {
                   </label>
                   {newCommunityData.coverImage && (
                     <Button size="small" color="error" onClick={() => setNewCommunityData(p => ({ ...p, coverImage: null, coverFile: null }))} sx={{ mt: 1 }}>
-                        Remove Image
+                      Remove Image
                     </Button>
                   )}
                 </Box>
@@ -992,9 +1039,9 @@ export default function UserDashboard() {
                       MenuProps={MenuProps}
                     >
                       {AVAILABLE_INTERESTS.map((interest) => (
-                        <MenuItem 
-                          key={interest} 
-                          value={interest} 
+                        <MenuItem
+                          key={interest}
+                          value={interest}
                           sx={{ fontWeight: newCommunityData.categories.includes(interest) ? 700 : 400 }}
                         >
                           {interest}
@@ -1089,7 +1136,7 @@ export default function UserDashboard() {
               onChange={(e) => setEditData(p => ({ ...p, bio: e.target.value }))}
               InputProps={{ startAdornment: <InputAdornment position="start"><Info /></InputAdornment> }}
             />
-            
+
             {/* Interests Section */}
             <Typography variant="subtitle1" fontWeight={600} mt={3}>Your Interests</Typography>
             <Grid container spacing={1}>
@@ -1110,13 +1157,13 @@ export default function UserDashboard() {
               })}
             </Grid>
           </Stack>
-          
+
           <Box sx={{ mt: 4, pb: 2 }}>
             <Button variant="contained" color="primary" fullWidth onClick={handleSaveProfile} sx={{ py: 1.5, fontWeight: 700 }}>
               Save Changes
             </Button>
             <Button variant="text" color="error" fullWidth onClick={() => { localStorage.removeItem('token'); window.location.href = '/login'; }} sx={{ mt: 1, fontWeight: 600 }}>
-                <Logout sx={{ mr: 1 }} /> Log Out
+              <Logout sx={{ mr: 1 }} /> Log Out
             </Button>
           </Box>
         </Box>
@@ -1137,11 +1184,11 @@ export default function UserDashboard() {
             </Typography>
             <IconButton onClick={() => setNotificationDrawer(false)}><CloseIcon /></IconButton>
           </Stack>
-          
+
           <Stack direction="row" spacing={1} mb={2} justifyContent="flex-end">
             <Button size="small" variant="text" onClick={handleMarkAllAsRead}>Mark All as Read</Button>
           </Stack>
-          
+
           <Divider sx={{ mb: 2 }} />
 
           <List sx={{ p: 0 }}>
@@ -1159,9 +1206,9 @@ export default function UserDashboard() {
                       {notif.read ? <CheckIcon color="disabled" /> : <CloseIcon color="error" />}
                     </IconButton>
                   }
-                  sx={{ 
-                    bgcolor: notif.read ? 'white' : theme.palette.info.light + '15', 
-                    borderRadius: 1, 
+                  sx={{
+                    bgcolor: notif.read ? 'white' : theme.palette.info.light + '15',
+                    borderRadius: 1,
                     mb: 1,
                     borderLeft: notif.read ? 'none' : `4px solid ${theme.palette.info.main}`,
                   }}
@@ -1183,18 +1230,28 @@ export default function UserDashboard() {
                         >
                           {notif.message}
                         </Typography>
-                        <Typography variant="caption" display="block" color="text.secondary">
+                        <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 0.5 }}>
                           {new Date(notif.createdAt).toLocaleString()}
                         </Typography>
+
+                        {/* --- UPDATED LOCATION FOR BUTTONS --- */}
+                        {notif.type === 'COMMUNITY_INVITE' && notif.data?.communityId && (
+                          <Box sx={{ mt: 1, display: 'flex', flexDirection: 'row', gap: 1 }}>
+                            <Button size="small" variant="contained" color="success" onClick={() => handleAcceptInvite(notif._id, notif.data.communityId)}>Accept</Button>
+                            <Button size="small" variant="outlined" color="error" onClick={() => handleDeclineInvite(notif._id)}>Decline</Button>
+                          </Box>
+                        )}
                       </React.Fragment>
                     }
                   />
-                  {notif.type === 'invite' && notif.data?.communityId && (
-                    <Box sx={{ ml: 2, display: 'flex', flexDirection: 'column', gap: 0.5, flexShrink: 0 }}>
+                  {/* REMOVED THE BUTTONS FROM HERE:
+                {notif.type === 'COMMUNITY_INVITE' && notif.data?.communityId && (
+                    <Box sx={{ ml: 2, display: 'flex', flexDirection: 'row', gap: 0.5, flexShrink: 0 }}>
                       <Button size="small" variant="contained" color="success" onClick={() => handleAcceptInvite(notif._id, notif.data.communityId)}>Accept</Button>
                       <Button size="small" variant="outlined" color="error" onClick={() => handleDeclineInvite(notif._id)}>Decline</Button>
                     </Box>
                   )}
+                */}
                 </ListItem>
               ))
             )}

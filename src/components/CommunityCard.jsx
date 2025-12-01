@@ -10,7 +10,7 @@ import {
 } from '@mui/material';
 import { People, Lock, Public } from '@mui/icons-material';
 
-const CommunityCard = ({ name, description, members, isPrivate, tags }) => {
+const CommunityCard = ({ name, description, memberCount, isPrivate, categories, coverImage }) => {
   return (
     <Card sx={{ 
         height: '100%', 
@@ -26,8 +26,10 @@ const CommunityCard = ({ name, description, members, isPrivate, tags }) => {
       <CardContent sx={{ flexGrow: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
           {/* Subtle icon/avatar based on community type */}
-          <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
-            {isPrivate ? <Lock fontSize="small" /> : <Public fontSize="small" />}
+          <Avatar 
+          src={`http://localhost:3001${coverImage}`}
+          sx={{ bgcolor: 'primary.main', mr: 2 }}>
+            {`http://localhost:3001${coverImage}`}
           </Avatar>
           <Typography variant="h6" component="div" noWrap>
             {name}
@@ -40,8 +42,8 @@ const CommunityCard = ({ name, description, members, isPrivate, tags }) => {
         </Typography>
 
         {/* Tags/Chips */}
-        <Box sx={{ my: 1 }}>
-          {tags.map((tag) => (
+        {/* <Box sx={{ my: 1 }}>
+          {categories.map((tag) => (
             <Chip 
               key={tag} 
               label={tag} 
@@ -49,12 +51,12 @@ const CommunityCard = ({ name, description, members, isPrivate, tags }) => {
               sx={{ mr: 0.5, mb: 0.5, bgcolor: 'grey.200' }} 
             />
           ))}
-        </Box>
+        </Box> */}
         
         {/* Member count */}
         <Box sx={{ display: 'flex', alignItems: 'center', color: 'text.secondary', mt: 1 }}>
           <People sx={{ fontSize: 16, mr: 0.5 }} />
-          <Typography variant="caption">{members.toLocaleString()} Members</Typography>
+          <Typography variant="caption">{memberCount.toLocaleString()} Members</Typography>
         </Box>
       </CardContent>
       
