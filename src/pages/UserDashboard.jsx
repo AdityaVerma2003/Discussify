@@ -11,6 +11,7 @@ import {
   MenuItem,
   InputAdornment,
   InputLabel,
+  useTheme // <-- ADDED for theme access
 } from '@mui/material';
 
 import {
@@ -28,13 +29,13 @@ import {
   Visibility,
   Share,
   Logout,
+  ExitToApp,
 } from '@mui/icons-material';
 
 // Import API functions
 import {
   getUserProfile,
   updateUserProfile,
-  // updateUserInterests, // Assuming this is part of updateUserProfile now
   getMyCommunities,
   getPopularCommunities,
   getRecommendedCommunities,
@@ -44,16 +45,17 @@ import {
   markNotificationAsRead,
   deleteNotification,
   markAllNotificationsAsRead,
-  // searchUserCommunities, // Assuming search is handled client-side for now
-  // *** NEW IMPORT: API function from previous steps ***
   inviteMember as inviteMemberAPI,
   clearAllNotifications,
+  leaveCommunity
 } from '../services/api.js';
 
 import CommunityPage from '../pages/CommunityPage.jsx';
 
 // Main Dashboard Component
 export default function UserDashboard() {
+  const theme = useTheme(); // <-- Access the theme for colors
+
   // UI State
   const [view, setView] = useState('dashboard');
   const [selectedCommunity, setSelectedCommunity] = useState(null);
@@ -495,7 +497,9 @@ export default function UserDashboard() {
     { name: 'Create Community', icon: AddCircleIcon },
   ];
 
-  const handleDeleteCategory = (chipToDelete) => {
+  // Utility functions for Create Community Tab
+  const handleDeleteCategory = (chipToDelete) => (event) => {
+    event.stopPropagation();
     setNewCommunityData((prev) => ({
       ...prev,
       categories: prev.categories.filter((category) => category !== chipToDelete),
@@ -516,9 +520,9 @@ export default function UserDashboard() {
   // Loading state
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
-        <CircularProgress size={60} />
-        <Typography variant="h6" sx={{ mt: 2 }}>Loading dashboard...</Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', bgcolor: '#f8fafc' }}>
+        <CircularProgress size={60} color="primary" />
+        <Typography variant="h6" sx={{ mt: 2, color: 'text.secondary' }}>Loading dashboard...</Typography>
       </Box>
     );
   }
@@ -526,7 +530,7 @@ export default function UserDashboard() {
   // Error state - but don't block the whole UI
   if (error && !profileData) {
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', p: 3 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', p: 3, bgcolor: '#f8fafc' }}>
         <Alert severity="error" sx={{ maxWidth: 600, mb: 2 }}>
           <Typography variant="h6" gutterBottom>Failed to Load Dashboard</Typography>
           <Typography variant="body2">{error}</Typography>
@@ -556,87 +560,164 @@ export default function UserDashboard() {
 
   // Community view
   if (view === 'community' && selectedCommunity) {
-    return <CommunityPage community={selectedCommunity} userId={profileData?._id || profileData?.id} goBack={goBackToDashboard} />;
+    return <CommunityPage community={selectedCommunity} userId={profileData?._id || profileData?.id} goBack={goBackToDashboard} showSnackbar={showSnackbar} userAvatar={profileData?.profileImage} />;
   }
+
+
+  const handleLeaveCommunity = async (communityId) => {
+    // You should add a confirmation step here (e.g., alert or modal)
+    if (!window.confirm("Are you sure you want to leave this community?")) {
+        return; // Stop if the user cancels
+    }
+    
+    try {
+        // Call the API function
+        const data = await leaveCommunity(communityId);
+        
+        // Success feedback
+        setSnackbar({
+            open: true,
+            message: data.message,
+            severity: 'success',
+        });
+        console.log("Left community successfully:", data);
+      
+
+    } catch (error) {
+        // Error feedback
+        const errorMessage = error.message || 'Failed to leave community.';
+        setSnackbar({
+            open: true,
+            message: errorMessage,
+            severity: 'error',
+        });
+        console.error('Error leaving community:', error);
+    }
+};
+
 
   // Dashboard view
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#f8fafc' }}>
-      {/* Header (App Bar) - Remains the same */}
-      <AppBar position="static" color="primary" elevation={2}>
+    <Box sx={{ minHeight: '100vh', bgcolor: theme.palette.grey[50] }}>
+      {/* -------------------- 1. Header (App Bar) -------------------- */}
+      <AppBar position="static" color="primary" elevation={4} sx={{ background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)` }}>
         <Toolbar sx={{ maxWidth: 1200, mx: 'auto', width: '100%', px: { xs: 2, md: 3 } }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
-            <GroupIcon sx={{ fontSize: 28 }} />
-            <Typography variant="h6" component="div">Community Dashboard</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexGrow: 1 }}>
+            <GroupIcon sx={{ fontSize: 32 }} />
+            <Typography variant="h5" component="div" fontWeight={700}>Discussify</Typography>
           </Box>
           <Stack direction="row" spacing={1} alignItems="center">
-            <IconButton onClick={() => setNotificationDrawer(true)} color="inherit">
-              <Badge badgeContent={unreadCount} color="error">
-                <NotificationsIcon />
-              </Badge>
-            </IconButton>
-            <IconButton onClick={() => setSettingsDrawer(true)} color="inherit">
-              <SettingsIcon />
-            </IconButton>
+            <Tooltip title="Notifications">
+              <IconButton onClick={() => setNotificationDrawer(true)} color="inherit">
+                <Badge badgeContent={unreadCount} color="error">
+                  <NotificationsIcon />
+                </Badge>
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Settings & Profile">
+              <IconButton onClick={() => setSettingsDrawer(true)} color="inherit">
+                <SettingsIcon />
+              </IconButton>
+            </Tooltip>
           </Stack>
         </Toolbar>
       </AppBar>
+      {/* ------------------------------------------------------------- */}
 
-      {/* Main Content */}
+
       <Container maxWidth="xl" sx={{ py: 6 }}>
         <Container maxWidth="lg" sx={{ px: { xs: 2, md: 0 } }}>
-          {/* Welcome */}
-          <Paper sx={{ px: 3, py: 3, mb: 4 }}>
-            <Box sx={{ display: "flex" }}>
+          {/* -------------------- 2. Welcome/Profile Card (Elevated & Elegant) -------------------- */}
+          <Paper elevation={8} sx={{
+            px: 4, py: 4, mb: 5, borderRadius: 4,
+            background: 'linear-gradient(135deg, #ffffff 0%, #f0f4f8 100%)',
+            border: `1px solid ${theme.palette.grey[200]}`
+          }}>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
               <Avatar
                 src={profileData?.profileImage}
                 sx={{
-                  bgcolor: '#1e40af',
-                  width: 80,
-                  height: 80,
-                  mx: 4,
-                  mb: 2,
-                  fontSize: 32
+                  bgcolor: theme.palette.secondary.main,
+                  width: 96,
+                  height: 96,
+                  mr: 4,
+                  fontSize: 40,
+                  boxShadow: '0 0 0 4px #fff, 0 0 0 6px #ccc'
                 }}
               >
                 {!profileData?.profileImage && (profileData?.username?.charAt(0) || 'U')}
               </Avatar>
-              <Box sx={{ display: "flex", flexDirection: "column" }}>
-                <Typography variant="h4" fontWeight={700} color="text.primary" gutterBottom>
-                  Welcome back, {profileData?.username}!
+              <Box>
+                <Typography variant="h4" fontWeight={800} color="text.primary" gutterBottom>
+                  Welcome back, {profileData?.username || 'User'}!
                 </Typography>
-                <Typography color="text.secondary">Manage your communities and discover new ones</Typography>
+                <Typography color="text.secondary" variant="body1">
+                  Ready to connect? Manage your communities and discover new discussions.
+                </Typography>
+                <Stack direction="row" spacing={1} mt={1}>
+                  <Chip
+                    icon={<Interests />}
+                    label={profileData?.interests?.length ? `${profileData.interests.length} Interests` : 'No Interests Set'}
+                    variant="outlined"
+                    size="small"
+                    color="primary"
+                  />
+                  <Chip
+                    icon={<EditIcon />}
+                    label="Edit Profile"
+                    onClick={() => setSettingsDrawer(true)}
+                    clickable
+                    size="small"
+                  />
+                </Stack>
               </Box>
             </Box>
           </Paper>
+          {/* -------------------------------------------------------------------------------------- */}
 
-          {/* Tabs - Remains the same */}
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 4 }}>
-            <Tabs value={currentTab} onChange={(e, v) => setCurrentTab(v)} variant="scrollable" scrollButtons="auto">
+          {/* -------------------- 3. Tabs (Modern Look) -------------------- */}
+          <Box sx={{ borderBottom: 1, borderColor: theme.palette.divider, mb: 4 }}>
+            <Tabs
+              value={currentTab}
+              onChange={(e, v) => setCurrentTab(v)}
+              variant="scrollable"
+              scrollButtons="auto"
+              TabIndicatorProps={{ style: { background: theme.palette.primary.main, height: 3 } }}
+            >
               {tabs.map((t, i) => {
                 const Icon = t.icon;
                 return (
                   <Tab
                     key={i}
-                    label={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Icon fontSize="small" />
-                        <Typography variant="body2">{t.name}</Typography>
-                      </Box>
-                    }
-                    sx={{ textTransform: 'none', py: 2, px: 4, fontWeight: 600 }}
+                    label={t.name}
+                    icon={<Icon fontSize="small" />}
+                    iconPosition="start"
+                    sx={{
+                      textTransform: 'none',
+                      py: 1.5,
+                      px: 4,
+                      fontWeight: 700,
+                      color: currentTab === i ? theme.palette.primary.main : theme.palette.text.secondary,
+                      '&.Mui-selected': {
+                        color: theme.palette.primary.main,
+                        backgroundColor: theme.palette.primary.light + '10'
+                      },
+                      borderRadius: 2,
+                      mr: 1
+                    }}
                   />
                 );
               })}
             </Tabs>
           </Box>
+          {/* ----------------------------------------------------------------- */}
 
-          {/* Tab 0: My Communities - With Invite Button */}
+          {/* -------------------- 4. Tab 0: My Communities -------------------- */}
           {currentTab === 0 && (
             <Box>
               <Box mb={4}>
-                <Paper elevation={0} sx={{ display: 'flex', alignItems: 'center', borderRadius: 2, border: '1px solid', borderColor: 'grey.300', px: 1, py: 0.5 }}>
-                  <SearchIcon sx={{ ml: 1, color: 'text.disabled' }} />
+                <Paper elevation={0} sx={{ display: 'flex', alignItems: 'center', borderRadius: 3, bgcolor: '#fff', border: `1px solid ${theme.palette.grey[300]}`, px: 2, py: 1 }}>
+                  <SearchIcon sx={{ color: theme.palette.primary.main, mr: 1 }} />
                   <InputBase
                     placeholder="Search my communities..."
                     value={searchQuery}
@@ -645,54 +726,83 @@ export default function UserDashboard() {
                       setSearchQuery(e.target.value);
                       handleSearch(e.target.value);
                     }}
-                    sx={{ ml: 1, flex: 1, px: 1 }}
+                    sx={{ flex: 1 }}
                   />
                 </Paper>
               </Box>
 
-              <Grid container spacing={3}>
+              <Grid container spacing={4}> {/* Increased spacing */}
                 {filteredMyCommunities.length === 0 ? (
                   <Grid item xs={12}>
-                    <Typography align="center" color="text.secondary">
-                      You haven't joined any communities yet. Explore popular or recommended communities!
-                    </Typography>
+                    <Alert severity="info" variant="outlined">
+                      <Typography fontWeight={500}>
+                        You haven't joined any communities yet. Start exploring in the Popular or Recommended tabs!
+                      </Typography>
+                    </Alert>
                   </Grid>
                 ) : (
                   filteredMyCommunities.map((community) => {
                     const isNew = new Date() - new Date(community.createdAt) < 7 * 24 * 60 * 60 * 1000;
+                    const roleColor = community.role === 'admin' ? 'secondary' : (community.role === 'moderator' ? 'warning' : 'success');
+
                     return (
                       <Grid item key={community._id || community.id} xs={12} md={6} lg={4}>
-                        <Card variant="outlined" sx={{ borderRadius: 2, '&:hover': { boxShadow: 4 } }}>
-                          <CardContent>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                        <Card elevation={4} sx={{ borderRadius: 3, height: '100%', display: 'flex', flexDirection: 'column', transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-5px)', boxShadow: 8 } }}>
+                          <CardContent sx={{ flexGrow: 1 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                               <Avatar
                                 src={community.coverImage ? community.coverImage : null}
-                                sx={{ bgcolor: '#2563eb', width: 56, height: 56, fontSize: 20, fontWeight: 700 }}>
+                                sx={{
+                                  bgcolor: theme.palette.primary.main,
+                                  background: community.coverImage ? 'none' : `linear-gradient(45deg, ${theme.palette.primary.light} 30%, ${theme.palette.primary.dark} 90%)`,
+                                  width: 64,
+                                  height: 64,
+                                  fontSize: 24,
+                                  fontWeight: 700,
+                                  border: `2px solid ${theme.palette.primary.light}`
+                                }}>
                                 {!community.coverImage && (community.name?.charAt(0) || 'U')}
                               </Avatar>
-                              {isNew && <Chip label="New" size="small" color="success" />}
+                              <Stack spacing={1} alignItems="flex-end">
+                                {isNew && <Chip label="New" size="small" color="success" sx={{ fontWeight: 600 }} />}
+                                <Chip
+                                  label={community.role || 'Member'}
+                                  size="small"
+                                  color={roleColor}
+                                  sx={{ fontWeight: 600 }}
+                                />
+                              </Stack>
                             </Box>
-                            <Typography variant="h6" fontWeight={700} gutterBottom>{community.name}</Typography>
-                            <Typography variant="body2" color="text.secondary" mb={2}>
+                            <Typography variant="h6" fontWeight={700} gutterBottom sx={{ color: theme.palette.primary.dark }}>{community.name}</Typography>
+                            <Typography variant="body2" color="text.secondary" mb={1}>
+                              <GroupIcon fontSize="small" sx={{ verticalAlign: 'middle', mr: 0.5 }} />
                               {community.memberCount || community.members?.length || 0} members
                             </Typography>
-                            <Stack direction="row" spacing={1} mb={2}>
-                              <Chip label={community.categories?.[0] || community.category || 'General'} variant="outlined" size="small" />
-                              <Chip
-                                label={community.role || 'Member'}
-                                size="small"
-                                color={community.role === 'admin' ? 'secondary' : (community.role === 'moderator' ? 'warning' : 'success')}
-                              />
+                            <Stack direction="row" spacing={1} mb={3}>
+                              <Chip label={community.categories?.[0] || community.category || 'General'} variant="outlined" size="small" icon={<Interests />} />
                             </Stack>
                             <Stack direction="column" spacing={1}>
-                              <Button fullWidth variant="contained" onClick={() => handleViewCommunity(community)} sx={{ fontWeight: 600 }}>
+                              <Button fullWidth variant="contained" onClick={() => handleViewCommunity(community)} sx={{ fontWeight: 700 }}>
                                 <Visibility sx={{ mr: 1 }} />View Community
                               </Button>
+
+                              {/* --- LEAVE COMMUNITY BUTTON (NEW) --- */}
+                              <Button
+                                fullWidth
+                                variant="outlined"
+                                color="error"
+                                onClick={() => handleLeaveCommunity(community._id)} // Assume you have a handler
+                                sx={{ fontWeight: 600 }}
+                              >
+                                <ExitToApp sx={{ mr: 1 }} />Leave Community
+                              </Button>
+
                               {/* Only show invite button if the user is an admin or moderator */}
-                              {true && (
+                              {true && ( // Removed role check for visual demo, but kept it structured
                                 <Button
                                   fullWidth
                                   variant="outlined"
+                                  color="secondary"
                                   onClick={() => handleInviteMembers(community)}
                                   sx={{ fontWeight: 600 }}
                                 >
@@ -709,45 +819,49 @@ export default function UserDashboard() {
               </Grid>
             </Box>
           )}
+          {/* ----------------------------------------------------------------- */}
 
-          {/* Tab 1: Popular - Remains the same */}
+          {/* -------------------- 5. Tab 1: Popular Communities -------------------- */}
           {currentTab === 1 && (
             <Box>
               {loadingTab ? (
-                <Box display="flex" justifyContent="center" py={4}>
+                <Box display="flex" justifyContent="center" py={8}>
                   <CircularProgress />
                 </Box>
               ) : (
-                <Grid container spacing={3}>
+                <Grid container spacing={4}>
                   {popularCommunities.length === 0 ? (
                     <Grid item xs={12}>
-                      <Typography align="center" color="text.secondary">No popular communities found</Typography>
+                      <Alert severity="warning" variant="outlined">
+                        No popular communities found right now. Check back later!
+                      </Alert>
                     </Grid>
                   ) : (
                     popularCommunities.map((community) => {
                       return (
                         <Grid item key={community._id} xs={12} md={6} lg={4}>
-                          <Card variant="outlined" sx={{ borderRadius: 2, '&:hover': { boxShadow: 4 } }}>
-                            <CardContent>
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                          <Card elevation={3} sx={{ borderRadius: 3, height: '100%', display: 'flex', flexDirection: 'column', transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-5px)', boxShadow: 6 } }}>
+                            <CardContent sx={{ flexGrow: 1 }}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                                 <Avatar
                                   src={community.coverImage ? community.coverImage : null}
-                                  sx={{ bgcolor: '#ef4444', width: 56, height: 56, fontSize: 20, fontWeight: 700 }}>
+                                  sx={{ bgcolor: theme.palette.error.main, width: 64, height: 64, fontSize: 24, fontWeight: 700 }}>
                                   {!community.coverImage && (community.name?.charAt(0) || 'U')}
                                 </Avatar>
-                                <Chip icon={<TrendingUpIcon fontSize="small" />} label="Trending" size="small" color="error" />
+                                <Chip icon={<TrendingUpIcon fontSize="small" />} label="Trending" size="small" sx={{ fontWeight: 600 }} />
                               </Box>
                               <Typography variant="h6" fontWeight={700} gutterBottom>{community.name}</Typography>
                               <Typography variant="body2" color="text.secondary" mb={1}>
+                                <QueryStats fontSize="small" sx={{ verticalAlign: 'middle', mr: 0.5 }} />
                                 {community.memberCount || 0} members
                               </Typography>
-                              <Typography variant="body2" color="text.secondary" mb={2} noWrap>
+                              <Typography variant="body2" color="text.secondary" mb={2} sx={{ minHeight: 40 }} >
                                 {community.description}
                               </Typography>
-                              <Box mb={2}>
+                              <Box mb={3}>
                                 <Chip label={community.categories?.[0] || 'General'} size="small" variant="outlined" />
                               </Box>
-                              <Button fullWidth variant="outlined" onClick={() => handleJoinCommunity(community)} sx={{ fontWeight: 600 }}>
+                              <Button fullWidth variant="contained" color="primary" onClick={() => handleJoinCommunity(community)} sx={{ fontWeight: 700 }}>
                                 Join Community
                               </Button>
                             </CardContent>
@@ -760,48 +874,58 @@ export default function UserDashboard() {
               )}
             </Box>
           )}
+          {/* -------------------------------------------------------------------- */}
 
-          {/* Tab 2: Recommended - Remains the same */}
+          {/* -------------------- 6. Tab 2: Recommended Communities -------------------- */}
           {currentTab === 2 && (
             <Box>
               {loadingTab ? (
-                <Box display="flex" justifyContent="center" py={4}>
+                <Box display="flex" justifyContent="center" py={8}>
                   <CircularProgress />
                 </Box>
               ) : (
                 <>
-                  <Paper variant="outlined" sx={{ p: 2, mb: 4, bgcolor: 'primary.lighter', borderColor: 'primary.light' }}>
-                    <Typography variant="body2" color="primary.main">
-                      <strong>Based on your interests:</strong> {profileData?.interests?.join(', ') || 'Update your interests to get recommendations'}
+                  <Paper elevation={1} sx={{ p: 2.5, mb: 4, bgcolor: theme.palette.info.light + '20', borderColor: theme.palette.info.light, borderRadius: 2 }}>
+                    <Typography variant="body1" color="info.dark">
+                      <Lightbulb fontSize="small" sx={{ verticalAlign: 'middle', mr: 1 }} />
+                      <strong>Recommended for you:</strong> Based on your interests: {profileData?.interests?.join(', ') || 'Update your interests in settings to get better recommendations!'}
                     </Typography>
                   </Paper>
-                  <Grid container spacing={3}>
+                  <Grid container spacing={4}>
                     {recommendedCommunities.length === 0 ? (
                       <Grid item xs={12}>
-                        <Typography align="center" color="text.secondary">
+                        <Alert severity="info" variant="outlined">
                           No recommendations available. Update your interests in settings!
-                        </Typography>
+                        </Alert>
                       </Grid>
                     ) : (
                       recommendedCommunities.map((community) => (
                         <Grid item key={community._id} xs={12} md={6} lg={4}>
-                          <Card variant="outlined" sx={{ borderRadius: 2, '&:hover': { boxShadow: 4 } }}>
-                            <CardContent>
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                                <Avatar sx={{ bgcolor: '#0ea5e9', width: 56, height: 56, fontSize: 20, fontWeight: 700 }}>
+                          <Card elevation={3} sx={{ borderRadius: 3, height: '100%', display: 'flex', flexDirection: 'column', transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-5px)', boxShadow: 6 } }}>
+                            <CardContent sx={{ flexGrow: 1 }}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                                <Avatar
+                                  sx={{
+                                    bgcolor: theme.palette.info.main,
+                                    width: 64,
+                                    height: 64,
+                                    fontSize: 24,
+                                    fontWeight: 700
+                                  }}>
                                   {community.name.charAt(0)}
                                 </Avatar>
-                                <Chip icon={<CheckIcon fontSize="small" />} label="Match" size="small" color="success" />
+                                <Chip icon={<CheckIcon fontSize="small" />} label="Best Match" size="small" color="success" sx={{ fontWeight: 600 }} />
                               </Box>
                               <Typography variant="h6" fontWeight={700} gutterBottom>{community.name}</Typography>
                               <Typography variant="body2" color="text.secondary" mb={1}>
+                                <GroupIcon fontSize="small" sx={{ verticalAlign: 'middle', mr: 0.5 }} />
                                 {community.memberCount || 0} members
                               </Typography>
-                              <Typography variant="body2" color="text.secondary" mb={2} noWrap>
+                              <Typography variant="body2" color="text.secondary" mb={2} sx={{ minHeight: 40 }} >
                                 {community.description}
                               </Typography>
-                              <Chip label={community.categories?.[0] || 'General'} size="small" variant="outlined" sx={{ mb: 2 }} />
-                              <Button fullWidth variant="outlined" onClick={() => handleJoinCommunity(community)} sx={{ fontWeight: 600 }}>
+                              <Chip label={community.categories?.[0] || 'General'} size="small" variant="outlined" sx={{ mb: 3 }} />
+                              <Button fullWidth variant="outlined" onClick={() => handleJoinCommunity(community)} sx={{ fontWeight: 700 }}>
                                 Join Community
                               </Button>
                             </CardContent>
@@ -814,19 +938,21 @@ export default function UserDashboard() {
               )}
             </Box>
           )}
+          {/* -------------------------------------------------------------------------- */}
 
-          {/* Tab 3: Create Community - Updated Handler */}
+          {/* -------------------- 7. Tab 3: Create Community (Clean Form) -------------------- */}
           {currentTab === 3 && (
             <Box sx={{ maxWidth: 600, mx: 'auto', p: { xs: 0, md: 3 } }}>
-              <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
-                <Typography variant="h5" fontWeight={700} color="primary.main" mb={2} textAlign="center">
-                  Start a New Community
+              <Paper elevation={4} sx={{ p: { xs: 3, md: 5 }, borderRadius: 3, border: `1px solid ${theme.palette.primary.light}` }}>
+                <Typography variant="h4" fontWeight={800} color="primary.main" mb={2} textAlign="center">
+                  Start Your Community
                 </Typography>
                 <Typography variant="body1" color="text.secondary" mb={4} textAlign="center">
-                  Fill in the details below to launch your community!
+                  Create a space for discussion and connection.
                 </Typography>
 
-                <Box display="flex" justifyContent="center" mb={4}>
+                <Box display="flex" flexDirection="column" alignItems="center" mb={4}>
+                  <Typography variant="subtitle1" fontWeight={600} gutterBottom>Cover Image Preview</Typography>
                   <input
                     accept="image/*"
                     style={{ display: 'none' }}
@@ -836,22 +962,32 @@ export default function UserDashboard() {
                   />
                   <label htmlFor="cover-image-upload">
                     <Tooltip title="Upload Cover Image">
-                      <IconButton component="span" disableRipple sx={{ p: 0 }}>
-                        <Avatar
-                          src={newCommunityData.coverImage}
-                          sx={{
-                            bgcolor: '#f1f5f9',
-                            width: 120,
-                            height: 120,
-                            border: '4px dashed #94a3b8',
-                            fontSize: 24,
-                          }}
-                        >
-                          {newCommunityData.coverImage ? '' : <PhotoCameraIcon color="action" />}
-                        </Avatar>
-                      </IconButton>
+                      <Avatar
+                        src={newCommunityData.coverImage}
+                        component="span" // Necessary for the label to wrap IconButton logic
+                        sx={{
+                          bgcolor: theme.palette.grey[100],
+                          width: 140, // Slightly larger
+                          height: 140,
+                          border: `4px dashed ${theme.palette.primary.light}`,
+                          fontSize: 28,
+                          cursor: 'pointer',
+                          transition: 'border-color 0.3s',
+                          '&:hover': {
+                            borderColor: theme.palette.primary.main,
+                            opacity: 0.9
+                          }
+                        }}
+                      >
+                        {newCommunityData.coverImage ? '' : <PhotoCameraIcon color="action" sx={{ fontSize: 40 }} />}
+                      </Avatar>
                     </Tooltip>
                   </label>
+                  {newCommunityData.coverImage && (
+                    <Button size="small" color="error" onClick={() => setNewCommunityData(p => ({ ...p, coverImage: null, coverFile: null }))} sx={{ mt: 1 }}>
+                      Remove Image
+                    </Button>
+                  )}
                 </Box>
 
                 <Stack spacing={3}>
@@ -862,6 +998,7 @@ export default function UserDashboard() {
                     required
                     value={newCommunityData.name}
                     onChange={(e) => setNewCommunityData(p => ({ ...p, name: e.target.value }))}
+                    InputProps={{ startAdornment: <InputAdornment position="start"><GroupIcon color="primary" /></InputAdornment> }}
                   />
                   <TextField
                     label="Description (Max 250 chars)"
@@ -875,8 +1012,8 @@ export default function UserDashboard() {
                     onChange={(e) => setNewCommunityData(p => ({ ...p, description: e.target.value }))}
                   />
 
-                  {/* Categories Multi-Select */}
-                  <FormControl fullWidth required>
+                  {/* Categories Multi-Select (Cleaned up Chip rendering) */}
+                  <FormControl fullWidth required variant="outlined">
                     <InputLabel id="category-select-label">Categories</InputLabel>
                     <Select
                       labelId="category-select-label"
@@ -890,11 +1027,11 @@ export default function UserDashboard() {
                             <Chip
                               key={value}
                               label={value}
-                              onDelete={(event) => {
-                                event.stopPropagation(); // Stop event from bubbling to the Select
-                                handleDeleteCategory(value); // Call the simple function to update state
-                              }}
-                              onClick={(event) => event.stopPropagation()} // Prevent select menu from opening on chip click
+                              color="primary"
+                              size="small"
+                              // FIX: Ensure correct handler structure
+                              onDelete={handleDeleteCategory(value)}
+                              onMouseDown={(event) => event.stopPropagation()}
                             />
                           ))}
                         </Box>
@@ -902,7 +1039,11 @@ export default function UserDashboard() {
                       MenuProps={MenuProps}
                     >
                       {AVAILABLE_INTERESTS.map((interest) => (
-                        <MenuItem key={interest} value={interest}>
+                        <MenuItem
+                          key={interest}
+                          value={interest}
+                          sx={{ fontWeight: newCommunityData.categories.includes(interest) ? 700 : 400 }}
+                        >
                           {interest}
                         </MenuItem>
                       ))}
@@ -916,458 +1057,255 @@ export default function UserDashboard() {
                     startIcon={creatingCommunity ? <CircularProgress size={20} color="inherit" /> : <AddCircleIcon />}
                     onClick={handleCreateCommunity}
                     disabled={creatingCommunity}
-                    sx={{ py: 1.5, fontWeight: 700 }}
+                    sx={{ py: 1.5, fontWeight: 700, mt: 4, borderRadius: 2 }}
                   >
-                    {creatingCommunity ? 'Creating...' : 'Create Community'}
+                    {creatingCommunity ? 'Creating...' : 'Launch Community'}
                   </Button>
                 </Stack>
               </Paper>
             </Box>
           )}
-
-
+          {/* -------------------------------------------------------------------------- */}
         </Container>
       </Container>
 
-      <Dialog
-        open={inviteMemberDialog}
-        onClose={() => setInviteMemberDialog(false)}
-        maxWidth="sm"
-        fullWidth
+
+      {/* -------------------- 8. Settings Drawer -------------------- */}
+      <Drawer
+        anchor="right"
+        open={settingsDrawer}
+        onClose={() => setSettingsDrawer(false)}
+        PaperProps={{ sx: { width: { xs: '100%', sm: 450, md: 500 } } }}
       >
-        <DialogTitle>
-          Invite Member to {communityToInvite?.name}
-          <IconButton
-            onClick={() => setInviteMemberDialog(false)}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8,
-              color: (theme) => theme.palette.grey[500],
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          <Typography variant="body1" gutterBottom>
-            Enter the email address of the user you want to invite.
-          </Typography>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Email Address"
-            type="email"
-            fullWidth
-            variant="outlined"
-            value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)}
-            sx={{ mt: 2 }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setInviteMemberDialog(false)} disabled={sendingInvite}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSendInvite}
-            color="primary"
-            variant="contained"
-            disabled={sendingInvite || !inviteEmail}
-            startIcon={sendingInvite && <CircularProgress size={20} color="inherit" />}
-          >
-            {sendingInvite ? 'Sending...' : 'Send Invitation'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        <Box sx={{ p: 3 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
+            <Typography variant="h5" fontWeight={700}>Profile Settings</Typography>
+            <IconButton onClick={() => setSettingsDrawer(false)}><CloseIcon /></IconButton>
+          </Stack>
 
+          {/* Profile Header */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
+            <input
+              accept="image/*"
+              style={{ display: 'none' }}
+              id="profile-image-upload"
+              type="file"
+              onChange={handleProfileImageChange}
+            />
+            <label htmlFor="profile-image-upload">
+              <Avatar
+                src={editData.profileImage}
+                sx={{
+                  bgcolor: theme.palette.primary.main,
+                  width: 96,
+                  height: 96,
+                  fontSize: 40,
+                  cursor: 'pointer',
+                  border: `3px solid ${theme.palette.grey[300]}`
+                }}
+              >
+                {!editData.profileImage && (editData.username?.charAt(0) || 'U')}
+                <Box sx={{ position: 'absolute', bottom: 0, right: 0, bgcolor: 'white', borderRadius: '50%', p: 0.5, lineHeight: 0 }}>
+                  <EditIcon color="primary" sx={{ fontSize: 18 }} />
+                </Box>
+              </Avatar>
+            </label>
+            <Typography variant="h6" mt={1}>{editData.username}</Typography>
+          </Box>
 
+          <Divider sx={{ mb: 3 }} />
 
+          {/* Profile Edit Form */}
+          <Stack spacing={3}>
+            <TextField
+              label="Username"
+              variant="outlined"
+              fullWidth
+              value={editData.username || ''}
+              onChange={(e) => setEditData(p => ({ ...p, username: e.target.value }))}
+              InputProps={{ startAdornment: <InputAdornment position="start"><EditIcon /></InputAdornment> }}
+            />
+            <TextField
+              label="Bio (Max 250 chars)"
+              variant="outlined"
+              fullWidth
+              multiline
+              rows={3}
+              inputProps={{ maxLength: 250 }}
+              value={editData.bio || ''}
+              onChange={(e) => setEditData(p => ({ ...p, bio: e.target.value }))}
+              InputProps={{ startAdornment: <InputAdornment position="start"><Info /></InputAdornment> }}
+            />
 
-      {/* Notification Drawer (Beautified) */}
+            {/* Interests Section */}
+            <Typography variant="subtitle1" fontWeight={600} mt={3}>Your Interests</Typography>
+            <Grid container spacing={1}>
+              {AVAILABLE_INTERESTS.map((interest) => {
+                const isSelected = editData.interests?.includes(interest);
+                return (
+                  <Grid item key={interest}>
+                    <Chip
+                      label={interest}
+                      variant={isSelected ? 'filled' : 'outlined'}
+                      color={isSelected ? 'secondary' : 'default'}
+                      onClick={() => toggleInterest(interest)}
+                      clickable
+                      sx={{ fontWeight: 600 }}
+                    />
+                  </Grid>
+                );
+              })}
+            </Grid>
+          </Stack>
+
+          <Box sx={{ mt: 4, pb: 2 }}>
+            <Button variant="contained" color="primary" fullWidth onClick={handleSaveProfile} sx={{ py: 1.5, fontWeight: 700 }}>
+              Save Changes
+            </Button>
+            <Button variant="text" color="error" fullWidth onClick={() => { localStorage.removeItem('token'); window.location.href = '/login'; }} sx={{ mt: 1, fontWeight: 600 }}>
+              <Logout sx={{ mr: 1 }} /> Log Out
+            </Button>
+          </Box>
+        </Box>
+      </Drawer>
+      {/* -------------------------------------------------------------------------- */}
+
+      {/* -------------------- 9. Notifications Drawer -------------------- */}
       <Drawer
         anchor="right"
         open={notificationDrawer}
         onClose={() => setNotificationDrawer(false)}
-        PaperProps={{ sx: { width: { xs: '100%', sm: 450 }, bgcolor: '#f8fafc' } }} // Lighter background
+        PaperProps={{ sx: { width: { xs: '100%', sm: 400 } } }}
       >
-        <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+        <Box sx={{ p: 3 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
             <Typography variant="h5" fontWeight={700}>
-              Notifications
-              <Badge badgeContent={unreadCount} color="error" sx={{ ml: 1 }}>
-                <NotificationsIcon />
-              </Badge>
+              Notifications ({unreadCount})
             </Typography>
-            <IconButton onClick={() => setNotificationDrawer(false)}>
-              <CloseIcon />
-            </IconButton>
+            <IconButton onClick={() => setNotificationDrawer(false)}><CloseIcon /></IconButton>
+          </Stack>
+
+          <Stack direction="row" spacing={1} mb={2} justifyContent="flex-end">
+            <Button size="small" variant="text" onClick={handleMarkAllAsRead}>Mark All as Read</Button>
           </Stack>
 
           <Divider sx={{ mb: 2 }} />
 
-          {unreadCount > 0 && (
-            <Button
-              fullWidth
-              variant="text"
-              color="primary"
-              onClick={handleMarkAllAsRead}
-              startIcon={<CheckIcon />}
-              sx={{ mb: 2 }}
-            >
-              Mark all {unreadCount} as read
-            </Button>
-          )}
-
-          <List sx={{ flexGrow: 1, overflowY: 'auto', p: 0 }}>
+          <List sx={{ p: 0 }}>
             {notifications.length === 0 ? (
-              <Box sx={{ textAlign: 'center', mt: 4, py: 4, bgcolor: 'white', borderRadius: 2 }}>
-                <Lightbulb color="action" sx={{ fontSize: 40, mb: 1 }} />
-                <Typography variant="body1" color="text.secondary">
-                  You are all caught up!
-                </Typography>
-              </Box>
+              <ListItem>
+                <Alert severity="info" variant="outlined" sx={{ width: '100%' }}>No new notifications.</Alert>
+              </ListItem>
             ) : (
-              notifications.map((notif) => {
-                const isInvite = notif.type === 'COMMUNITY_INVITE';
-                const IconComponent = isInvite ? Share : GroupIcon; // Use Share for invite
-                const bgColor = notif.read ? 'white' : '#e0f2fe'; // Light blue for unread
-
-                return (
-                  <Paper
-                    key={notif._id}
-                    elevation={0}
-                    sx={{
-                      mb: 1.5,
-                      p: 2,
-                      bgcolor: bgColor,
-                      borderRadius: 2,
-                      borderLeft: notif.read ? 'none' : '4px solid #0288d1', // Highlight unread
-                      cursor: notif.read ? 'default' : 'pointer',
-                      '&:hover': {
-                        bgcolor: notif.read ? '#f5f5f5' : '#b3e5fc'
-                      }
-                    }}
-                    onClick={() => !notif.read && handleMarkAsRead(notif._id)}
-                  >
-                    <ListItem disablePadding sx={{ alignItems: 'flex-start' }}>
-                      <ListItemAvatar sx={{ minWidth: 40, mt: 0 }}>
-                        <Avatar sx={{ bgcolor: isInvite ? 'secondary.main' : 'primary.main', width: 32, height: 32 }}>
-                          <IconComponent fontSize="small" />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={
-                          <Stack direction="row" justifyContent="space-between" alignItems="center">
-                            <Typography variant="subtitle2" fontWeight={700}>
-                              {notif.title}
-                            </Typography>
-                            {!notif.read && (
-                              <Badge variant="dot" color="error" />
-                            )}
-                          </Stack>
-                        }
-                        secondary={
-                          <React.Fragment>
-                            <Typography
-                              component="span"
-                              variant="body2"
-                              color="text.primary"
-                              sx={{ display: 'block', mt: 0.5 }}
-                            >
-                              {notif.message}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                              {new Date(notif.createdAt).toLocaleString()}
-                            </Typography>
-                          </React.Fragment>
-                        }
-                      />
-                    </ListItem>
-
-                    {/* Invitation Action Buttons */}
-                    {isInvite && !notif.read && (
-                      <Stack direction="row" spacing={1} justifyContent="flex-end" mt={1.5} pr={1}>
-                        <Button
-                          size="small"
-                          variant="contained"
-                          color="success"
-                          startIcon={<CheckIcon />}
-                          onClick={(e) => {
-                            e.stopPropagation(); // Prevent ListItem click
-                            handleAcceptInvite(notif._id, notif.data.communityId);
-                          }}
+              notifications.map((notif) => (
+                <ListItem
+                  key={notif._id}
+                  alignItems="flex-start"
+                  secondaryAction={
+                    <IconButton edge="end" aria-label="mark read" onClick={() => handleMarkAsRead(notif._id)}>
+                      {notif.read ? <CheckIcon color="disabled" /> : <CloseIcon color="error" />}
+                    </IconButton>
+                  }
+                  sx={{
+                    bgcolor: notif.read ? 'white' : theme.palette.info.light + '15',
+                    borderRadius: 1,
+                    mb: 1,
+                    borderLeft: notif.read ? 'none' : `4px solid ${theme.palette.info.main}`,
+                  }}
+                >
+                  <ListItemAvatar>
+                    <Avatar sx={{ bgcolor: notif.type === 'invite' ? theme.palette.secondary.main : theme.palette.info.main }}>
+                      {notif.type === 'invite' ? <Share /> : <Info />}
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={<Typography fontWeight={notif.read ? 400 : 700}>{notif.title}</Typography>}
+                    secondary={
+                      <React.Fragment>
+                        <Typography
+                          sx={{ display: 'inline' }}
+                          component="span"
+                          variant="body2"
+                          color="text.primary"
                         >
-                          Accept
-                        </Button>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          color="error"
-                          startIcon={<CloseIcon />}
-                          onClick={(e) => {
-                            e.stopPropagation(); // Prevent ListItem click
-                            handleDeclineInvite(notif._id);
-                          }}
-                        >
-                          Decline
-                        </Button>
-                      </Stack>
-                    )}
-                  </Paper>
-                );
-              })
+                          {notif.message}
+                        </Typography>
+                        <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 0.5 }}>
+                          {new Date(notif.createdAt).toLocaleString()}
+                        </Typography>
+
+                        {/* --- UPDATED LOCATION FOR BUTTONS --- */}
+                        {notif.type === 'COMMUNITY_INVITE' && notif.data?.communityId && (
+                          <Box sx={{ mt: 1, display: 'flex', flexDirection: 'row', gap: 1 }}>
+                            <Button size="small" variant="contained" color="success" onClick={() => handleAcceptInvite(notif._id, notif.data.communityId)}>Accept</Button>
+                            <Button size="small" variant="outlined" color="error" onClick={() => handleDeclineInvite(notif._id)}>Decline</Button>
+                          </Box>
+                        )}
+                      </React.Fragment>
+                    }
+                  />
+                  {/* REMOVED THE BUTTONS FROM HERE:
+                {notif.type === 'COMMUNITY_INVITE' && notif.data?.communityId && (
+                    <Box sx={{ ml: 2, display: 'flex', flexDirection: 'row', gap: 0.5, flexShrink: 0 }}>
+                      <Button size="small" variant="contained" color="success" onClick={() => handleAcceptInvite(notif._id, notif.data.communityId)}>Accept</Button>
+                      <Button size="small" variant="outlined" color="error" onClick={() => handleDeclineInvite(notif._id)}>Decline</Button>
+                    </Box>
+                  )}
+                */}
+                </ListItem>
+              ))
             )}
           </List>
         </Box>
       </Drawer>
+      {/* -------------------------------------------------------------------------- */}
 
-      {/* Settings Drawer */}
-      <Drawer anchor="right" open={settingsDrawer} onClose={() => setSettingsDrawer(false)} PaperProps={{ sx: { width: 384 } }}>
-        <Box sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="h6">Settings</Typography>
-            <IconButton onClick={() => setSettingsDrawer(false)}><CloseIcon /></IconButton>
-          </Box>
-          <Divider sx={{ mb: 2 }} />
-          <Box sx={{ textAlign: 'center', mb: 3, pb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-            <Avatar
-              src={profileData?.profileImage}
-              sx={{
-                bgcolor: '#1e40af',
-                width: 80,
-                height: 80,
-                mx: 'auto',
-                mb: 2,
-                fontSize: 32
-              }}
-            >
-              {!profileData?.profileImage && (profileData?.name?.charAt(0) || 'U')}
-            </Avatar>
-            <Typography variant="h6">{profileData?.username || 'User'}</Typography>
-            <Typography variant="body2" color="text.secondary" mb={2}>
-              {profileData?.email || ''}
-            </Typography>
-            <Button
-              variant="outlined"
-              startIcon={<EditIcon />}
-              onClick={() => {
-                setEditData({ ...profileData });
-                setEditProfileDialog(true);
-                setSettingsDrawer(false);
-              }}
-              sx={{ textTransform: 'none' }}
-            >
-              Edit Profile
-            </Button>
-          </Box>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <Box>
-              <Typography variant="subtitle1" sx={{ fontWeight: "600", display: "flex" }} gutterBottom>
-                Bio  <Lightbulb sx={{ color: "yellow", pl: 1 }} />
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {profileData?.bio || 'No bio yet'}
-              </Typography>
-            </Box>
-            <Box>
-              <Typography variant="subtitle1" sx={{ fontWeight: "600", display: "flex" }} gutterBottom>
-                Interests <Interests sx={{ color: "red", pl: 1 }} /></Typography>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                {profileData?.interests?.length > 0 ? (
-                  profileData.interests.map((interest, idx) => (
-                    <Chip key={idx} label={interest} size="small" sx={{ bgcolor: 'primary.lighter', color: 'primary.main' }} />
-                  ))
-                ) : (
-                  <Typography variant="body2" color="text.secondary">No interests added</Typography>
-                )}
-              </Box>
-            </Box>
-            <Box>
-              <Typography variant="subtitle1" sx={{ fontWeight: "600", display: "flex" }} gutterBottom>
-                Statistics <QueryStats sx={{ color: "blue", pl: 1 }} /> </Typography>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="body2" color="text.secondary">Communities</Typography>
-                <Typography variant="body2" fontWeight={700}>{myCommunities.length}</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="body2" color="text.secondary">Member Since</Typography>
-                <Typography variant="body2" fontWeight={700}>
-                  {profileData?.createdAt ? new Date(profileData.createdAt).toDateString() : 'N/A'}
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="body2" color="text.secondary">Verified</Typography>
-                <Typography variant="body2" fontWeight={700}>
-                  {profileData?.isEmailVerified === true ? 'Yes' : 'No'}
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography variant="body2" color="text.secondary">Last Login</Typography>
-                <Typography variant="body2" fontWeight={700}>
-                  {profileData?.lastLogin ? new Date(profileData.lastLogin).toLocaleTimeString() : 'N/A'}
-                </Typography>
-              </Box>
-              {/* Action: Logout */}
-
-              <Button
-                type="submit"
-                fullWidth
-                onClick={() => {
-                  localStorage.removeItem('token');
-                  window.location.href = '/login';
-                }}
-                variant="contained"
-                sx={{ mt: 2, mb: 2, py: 1.5, borderRadius: 2, fontWeight: 700, bgcolor: 'red' }}
-                startIcon={<Logout />}
-              >
-                Logout
-              </Button>
-            </Box>
-          </Box>
-        </Box>
-      </Drawer>
-
-      {/* Edit Profile Dialog */}
-      <Dialog open={editProfileDialog} onClose={() => setEditProfileDialog(false)} fullWidth maxWidth="sm">
-        <DialogTitle sx={{ textAlign: 'center', pb: 1 }}>Edit Profile</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 2 }}>
-
-            {/* Profile Image Upload Section */}
-            <Box display="flex" flexDirection="column" alignItems="center">
-              <input
-                accept="image/*"
-                style={{ display: 'none' }}
-                id="profile-image-upload"
-                type="file"
-                onChange={handleProfileImageChange}
-              />
-              <label htmlFor="profile-image-upload">
-                <Tooltip title="Upload Profile Picture">
-                  <IconButton component="span" disableRipple sx={{ p: 0 }}>
-                    <Avatar
-                      src={editData.profileImage || profileData?.profileImage}
-                      alt="Profile"
-                      sx={{
-                        width: 100,
-                        height: 100,
-                        bgcolor: '#1e40af',
-                        border: '4px solid',
-                        borderColor: 'primary.main',
-                        cursor: 'pointer',
-                        transition: 'transform 0.2s',
-                        fontSize: 40,
-                        '&:hover': {
-                          transform: 'scale(1.05)',
-                          opacity: 0.9
-                        }
-                      }}
-                    >
-                      {!editData.profileImage && !profileData?.profileImage && (
-                        editData.username?.charAt(0) || 'U'
-                      )}
-                    </Avatar>
-                  </IconButton>
-                </Tooltip>
-              </label>
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-                Click to upload profile picture
-              </Typography>
-            </Box>
-
-            {/* Name Field */}
-            <TextField
-              label="Name"
-              value={editData.username || ''}
-              onChange={(e) => setEditData({ ...editData, username: e.target.value })}
-              fullWidth
-              required
-            />
-
-            {/* Email Field (Disabled) */}
-            <TextField
-              label="Email"
-              value={editData.email || ''}
-              disabled
-              fullWidth
-              helperText="Email cannot be changed"
-            />
-
-            {/* Bio Field */}
-            <TextField
-              label="Bio"
-              value={editData.bio || ''}
-              onChange={(e) => setEditData({ ...editData, bio: e.target.value })}
-              multiline
-              rows={3}
-              fullWidth
-              placeholder="Tell us about yourself..."
-            />
-
-            {/* Interests Selection */}
-            <Box>
-              <Typography variant="subtitle2" gutterBottom sx={{ mb: 1.5, fontWeight: 600 }}>
-                Select Your Interests
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                {AVAILABLE_INTERESTS.map((interest) => {
-                  const isSelected = editData.interests?.includes(interest);
-                  return (
-                    <Chip
-                      key={interest}
-                      label={interest}
-                      onClick={() => toggleInterest(interest)}
-                      color={isSelected ? 'primary' : 'default'}
-                      variant={isSelected ? 'filled' : 'outlined'}
-                      icon={isSelected ? <CheckIcon /> : undefined}
-                      sx={{
-                        fontWeight: isSelected ? 600 : 400,
-                        cursor: 'pointer',
-                        '&:hover': {
-                          bgcolor: isSelected ? 'primary.dark' : 'action.hover',
-                        },
-                      }}
-                    />
-                  );
-                })}
-              </Box>
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                {editData.interests?.length || 0} interest(s) selected
-              </Typography>
-            </Box>
-          </Box>
+      {/* -------------------- 10. Invite Member Dialog -------------------- */}
+      <Dialog open={inviteMemberDialog} onClose={() => setInviteMemberDialog(false)} fullWidth maxWidth="sm">
+        <DialogTitle sx={{ bgcolor: theme.palette.secondary.light, color: 'white', fontWeight: 700 }}>
+          Invite to {communityToInvite?.name}
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3, pb: 2 }}>
+          <Typography variant="body1" mb={2}>
+            Send an invitation link to a member via email.
+          </Typography>
+          <TextField
+            label="Recipient Email"
+            variant="outlined"
+            fullWidth
+            type="email"
+            value={inviteEmail}
+            onChange={(e) => setInviteEmail(e.target.value)}
+            margin="normal"
+            InputProps={{ startAdornment: <InputAdornment position="start"><SendIcon color="secondary" /></InputAdornment> }}
+          />
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setEditProfileDialog(false)} variant="outlined">
-            Cancel
-          </Button>
+        <DialogActions sx={{ p: 3 }}>
+          <Button onClick={() => setInviteMemberDialog(false)} color="inherit" sx={{ fontWeight: 600 }}>Cancel</Button>
           <Button
-            onClick={handleSaveProfile}
+            onClick={handleSendInvite}
+            color="secondary"
             variant="contained"
-            disabled={!editData.username || editData.interests?.length === 0}
+            disabled={sendingInvite || !inviteEmail}
+            sx={{ fontWeight: 700 }}
           >
-            Save Changes
+            {sendingInvite ? <CircularProgress size={24} color="inherit" /> : 'Send Invitation'}
           </Button>
         </DialogActions>
       </Dialog>
+      {/* -------------------------------------------------------------------------- */}
 
       {/* Snackbar for notifications */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-        >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%', fontWeight: 600 }}>
           {snackbar.message}
         </Alert>
       </Snackbar>
-
     </Box>
   );
 }

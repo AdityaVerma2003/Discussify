@@ -192,6 +192,7 @@ export const inviteMember = async (communityId, invitedUserEmail) => {
   return response.data;
 };
 
+
 /**
  * Join a community
  */
@@ -199,6 +200,12 @@ export const joinCommunity = async (idOrSlug) => {
   const response = await api.post(`/communities/${idOrSlug}/join`);
   return response.data;
 };
+
+export const leaveCommunity = async (idOrSlug) => {
+  const response = await api.post(`/communities/${idOrSlug}/leave`);
+  return response.data;
+};
+
 
 // ==================== POST/DISCUSSION APIs ====================
 

@@ -340,13 +340,20 @@ const LoginView = ({ setCurrentView, showToast }) => {
             });
 
             const result = await response.json();
+            console.log("result" , result)
 
             if (response.ok && result.token) { 
                 localStorage.setItem('token', result.token);
-                 localStorage.setItem('role', result.user.role);
+                localStorage.setItem('role', result.user.role);
                 showToast("Login successful! Redirecting...", "success");
                 setFormData({ email: '', password: '' }); 
-                setTimeout(() => navigate('/user'), 1500); 
+                if(result.user.role === 'admin'){
+                     setTimeout(() => navigate('/admin'), 1500); 
+                }
+                else {
+                    // If regular USER, navigate to /user
+                    setTimeout(() => navigate('/user'), 1500); 
+                }
 
             } else {
                 const errorMessage = result.message || 'Login failed. Check your credentials.';
