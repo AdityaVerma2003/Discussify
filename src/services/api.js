@@ -206,6 +206,10 @@ export const leaveCommunity = async (idOrSlug) => {
   return response.data;
 };
 
+export const getDiscoverableCommunities = async(userId)=>{
+  const response = await api.get(`/communities/discover/${userId}`)
+  return response.data;
+}
 
 // ==================== POST/DISCUSSION APIs ====================
 

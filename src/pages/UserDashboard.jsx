@@ -218,6 +218,7 @@ export default function UserDashboard() {
   };
 
 
+
   const loadRecommendedCommunities = async () => {
     try {
       setLoadingTab(true);
@@ -905,6 +906,7 @@ export default function UserDashboard() {
                             <CardContent sx={{ flexGrow: 1 }}>
                               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                                 <Avatar
+                                src={community.coverImage}
                                   sx={{
                                     bgcolor: theme.palette.info.main,
                                     width: 64,
@@ -912,7 +914,7 @@ export default function UserDashboard() {
                                     fontSize: 24,
                                     fontWeight: 700
                                   }}>
-                                  {community.name.charAt(0)}
+                                  {community.coverImage}
                                 </Avatar>
                                 <Chip icon={<CheckIcon fontSize="small" />} label="Best Match" size="small" color="success" sx={{ fontWeight: 600 }} />
                               </Box>
