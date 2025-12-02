@@ -241,6 +241,17 @@ export const togglePostVoteAPI = async (postId) => {
   const response = await api.put(`/posts/${postId}/vote`);
   return response.data;
 };
+
+
+export const createCommentAPI = async (postId, data) => {
+    try {
+        const response = await api.post(`/posts/${postId}/reply`, data);
+        return response.data;
+    } catch (error) {
+        console.error('Create comment API error:', error);
+        throw error;
+    }
+};
 /**
  * Search user's communities
  */

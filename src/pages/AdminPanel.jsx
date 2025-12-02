@@ -1,7 +1,7 @@
 import api from '../services/api';
 import {useNavigate} from "react-router-dom"
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { AccountCircle, ChatBubbleOutline, Close, DeleteOutline, EditOutlined, Flag, FlagOutlined, GroupAdd, Image, Logout, ScheduleOutlined, ThumbUpOutlined, Visibility } from '@mui/icons-material';
+import { AccountCircle, ChatBubbleOutline, Close, DeleteOutline, EditOutlined, Flag, FlagOutlined, GroupAdd, Image, Logout, ScheduleOutlined, ThumbUpOutlined, Visibility , Email , People , RssFeed , SpeakerNotes , Warning , Lock } from '@mui/icons-material';
 // --- Icon Imports (using inline SVG for single-file mandate) ---
 const LayoutDashboard = (props) => (
   <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1" /><rect width="7" height="5" x="14" y="3" rx="1" /><rect width="7" height="9" x="3" y="14" rx="1" /><rect width="7" height="5" x="14" y="14" rx="1" /></svg>
@@ -97,20 +97,41 @@ const ThemeToggle = ({ theme, toggleTheme }) => {
   return (
     <button
       onClick={toggleTheme}
-      className={`flex items-center justify-between p-2 mt-4 rounded-lg w-full transition-colors duration-200 ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-        }`}
+      // Increased padding on button for a larger click target
+      className={`flex items-center justify-between p-2 rounded-lg w-full transition-colors duration-200 
+        ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+        }
+      `}
     >
       <span className="font-medium text-sm">Dark Theme</span>
-      <div className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-all duration-300 ${isDark ? primaryColor : 'bg-gray-300'}`}>
-        {/* Toggle Circle */}
+      
+      {/* Toggle Track (Now Relative) */}
+      <div 
+        className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-all duration-300 relative overflow-hidden
+          ${isDark ? primaryColor : 'bg-gray-300'}`}
+      >
+        
+        {/* Sun Icon (Absolute Left) */}
+        <Sun 
+          className={`w-4 h-4 absolute left-1 transition-opacity duration-300 
+            ${isDark ? 'opacity-100 text-white' : 'opacity-0 text-gray-600'}
+          `}
+        />
+
+        {/* Moon Icon (Absolute Right) */}
+        <Moon 
+          className={`w-4 h-4 absolute right-1 transition-opacity duration-300 
+            ${isDark ? 'opacity-0 text-gray-600' : 'opacity-100 text-white'}
+          `}
+        />
+
+        {/* Toggle Circle (The moving thumb) */}
         <div
-          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${isDark ? 'translate-x-6' : 'translate-x-0'
-            }`}
+          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 absolute 
+            ${isDark ? 'translate-x-[1.25rem]' : 'translate-x-0'} 
+          `}
         ></div>
-        {/* Icon */}
-        <div className="absolute right-6 transform translate-x-1.5 transition-opacity duration-300">
-          {isDark ? <Moon className="w-4 h-4 text-white" /> : <Sun className="w-4 h-4 text-gray-600" />}
-        </div>
+        
       </div>
     </button>
   );
@@ -131,27 +152,6 @@ const StatCard = ({ title, value, icon, trend, colorClass, themeClasses }) => (
         <span className="font-semibold text-green-500">{trend}</span> vs last week
       </p>
     )}
-  </div>
-);
-
-// --- Chart Mock Component (Simulating a Bar Chart) ---
-const MockBarChart = ({ title, data, themeClasses }) => (
-  <div className={`${themeClasses.cardBg} p-6 rounded-xl shadow-lg`}>
-    <h3 className={`text-xl font-semibold ${themeClasses.text} mb-4`}>{title}</h3>
-    <div className={`flex space-x-2 h-48 items-end p-2 ${themeClasses.isDark ? 'bg-gray-900' : 'bg-gray-100'} rounded-lg`}>
-      {data.map((item, index) => (
-        <div key={index} className="flex flex-col items-center flex-1 h-full">
-          {/* Bar */}
-          <div
-            className="bg-blue-600 rounded-t-sm transition-all duration-500 hover:bg-blue-500"
-            style={{ height: `${item.value}%`, width: '100%' }}
-            title={`${item.label}: ${item.value}%`}
-          ></div>
-          {/* Label */}
-          <span className={`text-xs ${themeClasses.isDark ? 'text-gray-500' : 'text-gray-500'} mt-1`}>{item.label}</span>
-        </div>
-      ))}
-    </div>
   </div>
 );
 
@@ -438,84 +438,168 @@ const EditUserModal = ({ user, onClose, onSave, themeClasses }) => {
 // VIEWS
 // =======================================================
 
+
+
+// Utility to format time for the activity log
+const formatTimeAgo = (dateString) => {
+  const diff = new Date() - new Date(dateString);
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `${days}d ago`;
+  if (hours > 0) return `${hours}h ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  return `${seconds}s ago`;
+};
+
+const getActivityIconAndColor = (type) => {
+  let IconComponent;
+  let colorClass; // Tailwind text color class
+
+  switch (type) {
+    case 'otp':
+    case 'welcome':
+      IconComponent = Email;
+      colorClass = 'text-blue-500'; // Primary Blue
+      break;
+    case 'community':
+    case 'COMMUNITY_INVITE':
+      IconComponent = People;
+      colorClass = 'text-green-500'; // Success Green
+      break;
+    case 'post':
+      IconComponent = RssFeed;
+      colorClass = 'text-yellow-500'; // Warning Yellow
+      break;
+    case 'comment':
+      IconComponent = SpeakerNotes;
+      colorClass = 'text-indigo-500'; // Info Indigo
+      break;
+    case 'info':
+      IconComponent = Flag; // Could signify a generic alert
+      colorClass = 'text-teal-500';
+      break;
+    case 'warning':
+      IconComponent = Warning;
+      colorClass = 'text-red-500'; // Critical Red
+      break;
+    default:
+      IconComponent = Lock; // Generic fallback icon
+      colorClass = 'text-gray-500';
+      break;
+  }
+  return { IconComponent, colorClass };
+};
+
+// --- New Component 1: Recent Activity Log ---
+const RecentActivityCard = ({ activity, themeClasses }) => {
+  const isDark = themeClasses.isDark;
+
+  return (
+    <div className={`${themeClasses.cardBg} p-8 rounded-xl shadow-lg border ${themeClasses.cardBorder}`}>
+      <h3 className={`text-xl font-semibold ${themeClasses.text} mb-6  flex items-center`}>
+        <ScheduleOutlined sx={{ fontSize: 32 }} className="mr-2 text-blue-500" />
+        Recent Site Activity
+      </h3>
+      <div className="space-y-3 max-h-80 overflow-y-auto pr-2"> {/* Added pr-2 for scrollbar spacing */}
+        {activity.map((item) => {
+          // Determine the icon and primary color based on the notification type
+          const { IconComponent, colorClass } = getActivityIconAndColor(item.type);
+          
+          // Display the username if populated, otherwise use a placeholder
+          const username = item.user && item.user.username ? item.user.username : 'System';
+
+          return (
+            <div
+              key={item._id}
+              className={`flex items-start p-3 rounded-xl transition-colors duration-150 ${isDark ? 'hover:bg-gray-750' : 'hover:bg-gray-100'} border-l-4 ${colorClass.replace('text-', 'border-')}`} // Added border-left for visual flair
+            >
+              
+              {/* 🚀 FIXED ICON AREA */}
+              <div className={`p-2 rounded-full mr-3 ${colorClass.replace('text-', 'bg-')} bg-opacity-10`}>
+                <IconComponent sx={{ fontSize: 18 }} className={colorClass} />
+              </div>
+
+              <div className="flex-1 min-w-0">
+                {/* 🚀 NEW: Title and User Context */}
+                <div className="flex items-center justify-between">
+                    <p className={`text-sm font-semibold ${themeClasses.text} truncate`}>
+                        {item.title}
+                    </p>
+                    {/* User who triggered the activity */}
+                    <span className={`text-xs ml-2 ${isDark ? 'text-blue-400' : 'text-blue-600'} hover:underline cursor-pointer transition-colors`}>
+                        {username}
+                    </span>
+                </div>
+                
+                {/* Message/Description */}
+                <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'} mt-0.5 truncate`}>
+                    {item.message}
+                </p>
+                
+                {/* Type and Timestamp */}
+                <div className="flex justify-between items-center mt-1">
+                  <span className={`text-xs font-medium ${colorClass}`}>{item.type.toUpperCase().replace('_', ' ')}</span>
+                  <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                    {formatTimeAgo(item.createdAt || item.updatedAt)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+
+
 // --- Dashboard View ---
 const DashboardView = ({ analytics, themeClasses }) => {
-  const chartData = [
-    { label: 'Mon', value: 45 },
-    { label: 'Tue', value: 60 },
-    { label: 'Wed', value: 85 },
-    { label: 'Thu', value: 50 },
-    { label: 'Fri', 'value': 95 },
-    { label: 'Sat', value: 70 },
-    { label: 'Sun', value: 80 },
-  ];
+  
+  // Use the mock data here (in a real app, this data would be passed via props 
+  // from the parent component that made the API call).
+  const [recentActivity , setRecentActivity] = useState([]);
 
-  const chartBg = themeClasses.isDark ? 'bg-gray-900' : 'bg-gray-100';
+const getAllActivities = async()=>{
+  try {
+    const resp = await api.get("/admin/activity-feed");
+    console.log("resp from all the recent", resp.data.activities)
+    setRecentActivity( resp.data.activities)
+  } catch (error) {
+    console.log("error in fetching all the activities" , error)
+  }
+}
 
+useEffect(()=>{
+  getAllActivities();
+},[])
+
+  
   return (
     <div className="p-4 md:p-8 space-y-8">
       <h1 className={`text-3xl font-extrabold ${themeClasses.text}`}>Analytics Dashboard</h1>
 
-      {/* Stat Cards */}
+      {/* Stat Cards (KEPT) */}
       <div className="grid grid-cols-1 mt-4 mb-4 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Total Users"
-          value={analytics.totalUsers}
-          icon={<Users className="w-10 h-10 text-blue-500" />}
-          colorClass="border-blue-600"
-          themeClasses={themeClasses}
-        />
-        <StatCard
-          title="Total Communities"
-          value={analytics.totalCommunities}
-          icon={<Globe className="w-10 h-10 text-green-500" />}
-          colorClass="border-green-600"
-          themeClasses={themeClasses}
-        />
-        <StatCard
-          title="Total Posts"
-          value={analytics.totalPosts}
-          icon={<LayoutDashboard className="w-10 h-10 text-yellow-500" />}
-          colorClass="border-yellow-600"
-          themeClasses={themeClasses}
-        />
-        <StatCard
-          title="New Users (Last 7 Days)"
-          value={analytics.newUsersLastWeek}
-          icon={<Users className="w-10 h-10 text-red-500" />}
-          trend="+8.5%"
-          colorClass="border-red-600"
-          themeClasses={themeClasses}
-        />
+        <StatCard title="Total Users" value={analytics.totalUsers} icon={<Users className="w-10 h-10 text-blue-500" />} colorClass="border-blue-600" themeClasses={themeClasses} />
+        <StatCard title="Total Communities" value={analytics.totalCommunities} icon={<Globe className="w-10 h-10 text-green-500" />} colorClass="border-green-600" themeClasses={themeClasses} />
+        <StatCard title="Total Posts" value={analytics.totalPosts} icon={<LayoutDashboard className="w-10 h-10 text-yellow-500" />} colorClass="border-yellow-600" themeClasses={themeClasses} />
+        <StatCard title="New Users (Last 7 Days)" value={analytics.newUsersLastWeek} icon={<Users className="w-10 h-10 text-red-500" />} trend="+8.5%" colorClass="border-red-600" themeClasses={themeClasses} />
       </div>
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <MockBarChart
-          title="Daily Activity Rate (%)"
-          data={chartData}
-          themeClasses={themeClasses}
+      <div className="grid grid-cols-1 lg:grid-cols-1 pt-6 gap-6">
+        
+        {/* Replacement 1: Recent Activity Log */}
+        <RecentActivityCard 
+            activity={recentActivity} 
+            themeClasses={themeClasses} 
         />
+      
 
-        {/* Mock Line Chart for Visual Diversity */}
-        <div className={`${themeClasses.cardBg} p-6 rounded-xl shadow-lg`}>
-          <h3 className={`text-xl font-semibold ${themeClasses.text} mb-4`}>Total Users Over Time</h3>
-          <div className={`h-48 p-2 ${chartBg} rounded-lg relative`}>
-            {/* Simple SVG/Tailwind Line Graph Mock */}
-            <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full">
-              <polyline
-                fill="none"
-                stroke={themeClasses.chartColor}
-                strokeWidth="2"
-                points="0,90 10,75 20,80 30,55 40,65 50,40 60,50 70,30 80,45 90,20 100,25"
-              />
-              <circle cx="90" cy="20" r="3" fill={themeClasses.chartColor} className="shadow-lg" />
-            </svg>
-            <p className={`absolute bottom-4 left-4 text-xs ${themeClasses.isDark ? 'text-gray-500' : 'text-gray-500'}`}>Jan</p>
-            <p className={`absolute bottom-4 right-4 text-xs ${themeClasses.isDark ? 'text-gray-500' : 'text-gray-500'}`}>Dec</p>
-          </div>
-          <p className={`text-sm ${themeClasses.isDark ? 'text-gray-400' : 'text-gray-500'} mt-4 text-center`}>User growth has been steady.</p>
-        </div>
       </div>
     </div>
   );
